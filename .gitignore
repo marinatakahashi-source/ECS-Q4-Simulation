@@ -1,0 +1,32 @@
+# Data files
+*.csv
+*.xlsx
+*.json
+*.txt
+
+# Python
+*.py
+__pycache__/
+
+# SQL
+*.sql
+
+# Claude internal
+.claude/
+
+# Project config
+CLAUDE.md
+
+# Other HTML files (keep only ecs_owned_bubble_lvl7.html)
+ebu1-org-builder.html
+ebu1_pipegen_chart.html
+ecs_owned_bubble.html
+august_openpipe.html
+pipegen_chart.html
+runrate-analysis.html
+stage_velocity.html
+stage_velocity_v2.html
+
+# Directories
+snapshots/
+org-planner/
