@@ -224,7 +224,7 @@
 <!-- ── SENSITIVITY TABLE ── -->
 <div class="sens-section">
   <h2>感応度分析 — Open Pipe × Conversion Rate（November）</h2>
-  <p style="font-size:12px;color:#888;margin-bottom:12px;">各セルはNovember Landing $合計（$K）。太字セルが現在の設定値。</p>
+  <p style="font-size:12px;color:#888;margin-bottom:12px;">各セルはOp to ACV（$K）= Day1 Pipe × CV%。Pred Op to ACV = $2,385K が目安。</p>
   <div id="sensTable"></div>
 </div>
 
@@ -385,7 +385,7 @@ function render() {
 
 function renderSens1(params) {
   const nov = params.November;
-  const pipes = [4000, 5000, 6000, 6700, 8000, 10000, 12000];
+  const pipes = [6000,7000,8000,9000,10000,11000,12000,13000,14000,15000,16000,17000,18000,19000,20000,21000,22000,23000,24000,25000];
   const cvs   = [25, 30, 35, 40, 45, 50, 55];
   const curPipe = nov.pipe;
   const curCV   = nov.cv * 100;
@@ -398,12 +398,11 @@ function renderSens1(params) {
   pipes.forEach(pipe => {
     html += `<tr><td>${fmt(pipe)}</td>`;
     cvs.forEach(cv => {
-      const opAcv  = pipe * nov.erosion * (cv / 100);
-      const total  = nov.cc + opAcv + OTHER_ACTUAL.November;
-      const isCur  = Math.abs(pipe - curPipe) < 200 && Math.abs(cv - curCV) < 3;
-      const gap    = total - PRED.November.total;
-      const cls    = isCur ? 'highlight-cell' : (gap >= 0 ? 'cell-pos' : 'cell-neg');
-      html += `<td class="${cls}">$${Math.round(total).toLocaleString()}k</td>`;
+      const opAcv = pipe * (cv / 100);
+      const isCur = Math.abs(pipe - curPipe) < 200 && Math.abs(cv - curCV) < 3;
+      const gap   = opAcv - PRED.November.opAcv;
+      const cls   = isCur ? 'highlight-cell' : (gap >= 0 ? 'cell-pos' : 'cell-neg');
+      html += `<td class="${cls}">$${Math.round(opAcv).toLocaleString()}k</td>`;
     });
     html += '</tr>';
   });
