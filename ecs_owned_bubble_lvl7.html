@@ -180,7 +180,7 @@ const yMin = 0;
 function sx(v) { return PAD.left + (v - xMin) / (xMax - xMin) * PW; }
 function sy(v) { return PAD.top + PH - (v - yMin) / (yMax - yMin) * PH; }
 const maxOwned = Math.max(...RAW.map(d => d.amt_owned));
-function sr(v) { return 4 + Math.pow(v / maxOwned, 0.55) * 46; }
+function sr(v) { return 3 + Math.pow(v / maxOwned, 0.55) * 30; }
 
 const xTicks = [0,10,20,30,40,50,60,70,80,90,100];
 const yTicks = [0,500000,1000000,1500000,2000000,2500000,3000000,3500000,4000000];

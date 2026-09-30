@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FY27 ECS Owned Rate – AE別バブルチャート</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .viz-root {
+    --surface-1:      #fcfcfb;
+    --surface-2:      #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--surface-2);
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .viz-root {
+      --surface-1: #1a1a19; --surface-2: #0d0d0d;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7;
+      --text-muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+    }
+  }
+
+  h1 { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: var(--text-secondary); margin-bottom: 18px; line-height: 1.6; }
+
+  .chart-wrap {
+    background: var(--surface-1);
+    border-radius: 8px;
+    padding: 20px 20px 12px 20px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .legend-row {
+    display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 14px; align-items: center;
+  }
+  .legend-group { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .legend-sep { width: 1px; height: 14px; background: var(--baseline); }
+  .legend-note { font-size: 11px; color: var(--text-muted); }
+
+  .filter-row {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; align-items: center;
+  }
+  .filter-label { font-size: 11px; color: var(--text-muted); margin-right: 4px; min-width: 36px; }
+  .filter-btn {
+    font-size: 11px; padding: 3px 10px; border-radius: 12px; border: 1px solid var(--baseline);
+    background: var(--surface-1); color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+    font-family: inherit;
+  }
+  .filter-btn.active { background: var(--flm-c, var(--text-primary)); color: #fff; border-color: var(--flm-c, var(--text-primary)); }
+  .filter-btn[data-flm="__all__"].active { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
+  .filter-btn:hover:not(.active) { border-color: var(--text-secondary); }
+
+  svg { display: block; }
+
+  #tooltip {
+    position: fixed; background: var(--surface-1, #fcfcfb);
+    border: 1px solid var(--border, rgba(11,11,11,0.10));
+    border-radius: 6px; padding: 10px 12px; font-size: 12px;
+    color: var(--text-primary, #0b0b0b); pointer-events: none;
+    opacity: 0; transition: opacity 0.1s; z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12); max-width: 280px; line-height: 1.65;
+  }
+  #tooltip.show { opacity: 1; }
+  #tooltip strong { font-weight: 700; }
+  #tooltip .tt-mgr { font-size: 11px; font-weight: 700; margin-top: 2px; }
+  #tooltip .tt-lvl7 { font-size: 10px; color: var(--text-muted, #898781); margin-top: 1px; }
+  #tooltip .tt-group { font-size: 11px; margin-top: 1px; color: var(--text-secondary, #52514e); }
+  #tooltip .tt-row { display: flex; justify-content: space-between; gap: 16px; margin-top: 3px; }
+  #tooltip .tt-label { color: var(--text-muted, #898781); }
+  #tooltip .tt-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+  #tooltip .tt-sep { border-top: 1px solid var(--grid, #e1e0d9); margin: 5px 0 2px; }
+  #tooltip .tt-togo .tt-label { color: var(--text-secondary, #52514e); font-weight: 600; }
+  #tooltip .tt-togo .tt-val { color: var(--text-primary, #0b0b0b); }
+
+  details { margin-top: 14px; }
+  summary { font-size: 12px; color: var(--text-secondary); cursor: pointer; user-select: none; padding: 4px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+  th { text-align: left; padding: 5px 7px; border-bottom: 2px solid var(--baseline); color: var(--text-secondary); font-weight: 600; }
+  td { padding: 4px 7px; border-bottom: 1px solid var(--grid); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  .td-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="viz-root" id="root">
+  <h1>FY27 ECS Owned Rate — AE別バブルチャート</h1>
+  <p class="subtitle">縦軸: BCO総額（$）　横軸: Owned Rate（%）　バブルサイズ: Owned金額 ／ 全Segmentation対象 ／ 5件未満AE除外 ／ Owned Rate = 金額ベース ／ 色 = ECS Mgr</p>
+
+  <div class="chart-wrap">
+    <div class="legend-row" id="mgr-legend">
+      <!-- ECS Mgr凡例はJS生成 -->
+      <div class="legend-sep"></div>
+      <div class="legend-note">バブルサイズ = Owned金額 ／ ホバーで詳細</div>
+    </div>
+
+    <div class="filter-row" id="lvl5-filter">
+      <span class="filter-label">LVL5:</span>
+    </div>
+    <div class="filter-row" id="lvl6-filter">
+      <span class="filter-label">LVL6:</span>
+    </div>
+    <div class="filter-row" id="mgr-filter">
+      <span class="filter-label">ECS Mgr:</span>
+    </div>
+
+    <div id="chart-container"></div>
+  </div>
+
+  <details>
+    <summary>▶ データテーブル（全AE）</summary>
+    <table id="data-table"></table>
+  </details>
+</div>
+<div id="tooltip"></div>
+
+<script>
+const RAW = [{"ae":"Shuho Kobayashi","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Katsuyuki Watanabe","lvl7":"Nobuhiko Uchida","total":218,"owned":99,"owned_rate":35.4,"owned_rate_cnt":45.4,"amt_total":1343089,"amt_owned":475380},{"ae":"Yuka Ichimonji","mgr":"Yukari Nitta","lvl5":"Ryo Ichimaru","lvl6":"Hiroki Seki","lvl7":"Kazuyuki Oikawa","total":159,"owned":70,"owned_rate":37.3,"owned_rate_cnt":44.0,"amt_total":1168845,"amt_owned":435575},{"ae":"Hisae Asakura","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Katsuyuki Watanabe","lvl7":"Nobuhiko Uchida","total":102,"owned":68,"owned_rate":56.7,"owned_rate_cnt":66.7,"amt_total":1105067,"amt_owned":626539},{"ae":"Naotake Yajima","mgr":"Masahiro Kamiya","lvl5":"Seiji Morita","lvl6":"Tsuyoshi Ooka","lvl7":"Kiyoaki Hanaka","total":120,"owned":71,"owned_rate":43.5,"owned_rate_cnt":59.2,"amt_total":1022784,"amt_owned":444870},{"ae":"Hiroto Kondo","mgr":"Masahiro Kamiya","lvl5":"Seiji Morita","lvl6":"Tsuyoshi Ooka","lvl7":"Kiyoaki Hanaka","total":71,"owned":44,"owned_rate":58.3,"owned_rate_cnt":62.0,"amt_total":882023,"amt_owned":514108},{"ae":"Chihiro Niiya","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Katsuyuki Watanabe","lvl7":"Kei Fujita","total":110,"owned":80,"owned_rate":72.6,"owned_rate_cnt":72.7,"amt_total":858015,"amt_owned":622550},{"ae":"Masayuki Akima","mgr":"Takayuki Kobayashi","lvl5":"Takashi Itoh","lvl6":"Koji Maeda","lvl7":"JP - PS1 - RVP","total":64,"owned":1,"owned_rate":0.5,"owned_rate_cnt":1.6,"amt_total":814257,"amt_owned":3998},{"ae":"Chika Sekine","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Yusuke Tatsuta","lvl7":"Kentaro Suzuki","total":66,"owned":49,"owned_rate":72.6,"owned_rate_cnt":74.2,"amt_total":779510,"amt_owned":566255},{"ae":"Myungbo Sim","mgr":"Takayuki Kobayashi","lvl5":"Jay Park","lvl6":"Choonghwan (Ray) Lee","lvl7":"JINA PARK","total":47,"owned":7,"owned_rate":16.4,"owned_rate_cnt":14.9,"amt_total":766735,"amt_owned":125952},{"ae":"Kenta Imai","mgr":"Yukari Nitta","lvl5":"Takafumi Fukushima","lvl6":"Junya Tanaka","lvl7":"ANL - JP - EBU2 - MFG2 - MGR","total":287,"owned":69,"owned_rate":23.7,"owned_rate_cnt":24.0,"amt_total":745452,"amt_owned":176644},{"ae":"Yuki Miyoshi","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Kouhei Akutsu","lvl7":"Ginga Nakamura","total":78,"owned":23,"owned_rate":25.6,"owned_rate_cnt":29.5,"amt_total":738786,"amt_owned":188892},{"ae":"Yuzuka Morita","mgr":"Takayuki Kobayashi","lvl5":"Takashi Itoh","lvl6":"Koji Maeda","lvl7":"Seishiro Hagiwara","total":106,"owned":92,"owned_rate":79.9,"owned_rate_cnt":86.8,"amt_total":726297,"amt_owned":580384},{"ae":"Masataka Inoue","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Akihiko Murai","lvl7":"Satoshi Mizoguchi","total":67,"owned":40,"owned_rate":29.0,"owned_rate_cnt":59.7,"amt_total":710071,"amt_owned":206187},{"ae":"Toshiki Ikeura","mgr":"Yuta Hatanaka","lvl5":"Atsushi Mito","lvl6":"Ryuta Asai","lvl7":"Ayaho Tanizaki","total":67,"owned":53,"owned_rate":80.0,"owned_rate_cnt":79.1,"amt_total":687563,"amt_owned":549988},{"ae":"Risa Okawara","mgr":"Yukari Nitta","lvl5":"Takafumi Fukushima","lvl6":"Koji Oyamori","lvl7":"Kiyoshi Yasuda","total":324,"owned":107,"owned_rate":24.4,"owned_rate_cnt":33.0,"amt_total":684374,"amt_owned":167237},{"ae":"Haruka Tamurazaki","mgr":"Yukari Nitta","lvl5":"Ryo Ichimaru","lvl6":"Hiroki Seki","lvl7":"Tetsuya Kaino","total":98,"owned":69,"owned_rate":62.7,"owned_rate_cnt":70.4,"amt_total":683918,"amt_owned":428568},{"ae":"Daiki Kusakari","mgr":"Masahiro Kamiya","lvl5":"Seiji Morita","lvl6":"Ryo Sato","lvl7":"Aiichiro Kubo","total":86,"owned":46,"owned_rate":35.9,"owned_rate_cnt":53.5,"amt_total":675646,"amt_owned":242238},{"ae":"Wataru Kimijima","mgr":"Masahiro Kamiya","lvl5":"Seiji Morita","lvl6":"Tsuyoshi Ooka","lvl7":"Yuuki Hirata","total":74,"owned":50,"owned_rate":46.1,"owned_rate_cnt":67.6,"amt_total":642766,"amt_owned":296587},{"ae":"Takeshi Fukunaga","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Kouhei Akutsu","lvl7":"Ginga Nakamura","total":48,"owned":16,"owned_rate":13.5,"owned_rate_cnt":33.3,"amt_total":609090,"amt_owned":82230},{"ae":"Ryuya Chiba","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Takeshi Narishima","lvl7":"JP - FS - EBU3 - FINSCHU - FINS3 - 01 - RVP","total":80,"owned":41,"owned_rate":53.3,"owned_rate_cnt":51.2,"amt_total":593362,"amt_owned":316016},{"ae":"Ayuka Yamada","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Katsuyuki Watanabe","lvl7":"Yumi Ogura","total":74,"owned":33,"owned_rate":46.5,"owned_rate_cnt":44.6,"amt_total":571154,"amt_owned":265465},{"ae":"Hirotsuna Sasaki","mgr":"Tomoya Hagino","lvl5":"Takafumi Fukushima","lvl6":"Junya Tanaka","lvl7":"Taro Morita","total":253,"owned":129,"owned_rate":49.6,"owned_rate_cnt":51.0,"amt_total":548271,"amt_owned":272184},{"ae":"Yuzuru Hirotaki","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Takeshi Narishima","lvl7":"Kana Hayakawa","total":68,"owned":8,"owned_rate":5.8,"owned_rate_cnt":11.8,"amt_total":548036,"amt_owned":31741},{"ae":"Shinyoung Choi","mgr":"Takayuki Kobayashi","lvl5":"Jay Park","lvl6":"Hong Ki Hur","lvl7":"Kyoungmin Choi","total":26,"owned":10,"owned_rate":53.8,"owned_rate_cnt":38.5,"amt_total":530561,"amt_owned":285201},{"ae":"Mao Yashiro","mgr":"Tomoya Hagino","lvl5":"Seiji Morita","lvl6":"Yoshimoto Futami","lvl7":"Hiromi Sato","total":47,"owned":26,"owned_rate":24.6,"owned_rate_cnt":55.3,"amt_total":521582,"amt_owned":128570},{"ae":"Sumin Lee","mgr":"Takayuki Kobayashi","lvl5":"Jay Park","lvl6":"Hong Ki Hur","lvl7":"TaiHui Jang","total":38,"owned":7,"owned_rate":12.8,"owned_rate_cnt":18.4,"amt_total":506744,"amt_owned":65014},{"ae":"Shingo Nishinakama","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Yusuke Tatsuta","lvl7":"Masaki Sato","total":67,"owned":19,"owned_rate":27.4,"owned_rate_cnt":28.4,"amt_total":505786,"amt_owned":138508},{"ae":"Saki Okamoto","mgr":"Masahiro Kamiya","lvl5":"Seiji Morita","lvl6":"Ryo Sato","lvl7":"Kazuki Shibahara","total":50,"owned":40,"owned_rate":82.5,"owned_rate_cnt":80.0,"amt_total":497367,"amt_owned":410334},{"ae":"Atsuki Teranishi","mgr":"Masahiro Kamiya","lvl5":"Seiji Morita","lvl6":"Ryo Sato","lvl7":"Aiichiro Kubo","total":74,"owned":25,"owned_rate":37.9,"owned_rate_cnt":33.8,"amt_total":496190,"amt_owned":188140},{"ae":"satoru kitagawa","mgr":"Masahiro Kamiya","lvl5":"Seiji Morita","lvl6":"Tsuyoshi Ooka","lvl7":"Norihiro Yamazaki","total":64,"owned":50,"owned_rate":83.9,"owned_rate_cnt":78.1,"amt_total":482007,"amt_owned":404194},{"ae":"Yudai Takeda","mgr":"Tomoya Hagino","lvl5":"Seiji Morita","lvl6":"Yoshimoto Futami","lvl7":"Koki Tsutsumi","total":95,"owned":67,"owned_rate":71.1,"owned_rate_cnt":70.5,"amt_total":479333,"amt_owned":340786},{"ae":"Miya Sato","mgr":"Tomoya Hagino","lvl5":"Seiji Morita","lvl6":"Yoshimoto Futami","lvl7":"Hiromi Sato","total":64,"owned":32,"owned_rate":36.4,"owned_rate_cnt":50.0,"amt_total":476939,"amt_owned":173513},{"ae":"Reona Shirakawa","mgr":"Yukari Nitta","lvl5":"Ryo Ichimaru","lvl6":"Hiroki Seki","lvl7":"Ryo Niitsu","total":56,"owned":28,"owned_rate":59.5,"owned_rate_cnt":50.0,"amt_total":453040,"amt_owned":269709},{"ae":"Shuya Nagata","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Kouhei Akutsu","lvl7":"Yuichi Matsuura","total":51,"owned":27,"owned_rate":25.2,"owned_rate_cnt":52.9,"amt_total":438500,"amt_owned":110601},{"ae":"Tomoyoshi Sagara","mgr":"Takayuki Kobayashi","lvl5":"Takashi Itoh","lvl6":"Koji Maeda","lvl7":"Shinsuke Yamanaka","total":209,"owned":83,"owned_rate":48.4,"owned_rate_cnt":39.7,"amt_total":394254,"amt_owned":190947},{"ae":"Hyerin Park","mgr":"Takayuki Kobayashi","lvl5":"Jay Park","lvl6":"Choonghwan (Ray) Lee","lvl7":"Bumsoo LEE","total":29,"owned":16,"owned_rate":49.9,"owned_rate_cnt":55.2,"amt_total":393409,"amt_owned":196115},{"ae":"Sachi Kinoshita","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Kumiko Makuniya","lvl7":"Kazuto Shimamaki","total":52,"owned":31,"owned_rate":64.8,"owned_rate_cnt":59.6,"amt_total":380226,"amt_owned":246462},{"ae":"Kazumasa Matsumoto","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Akihiko Murai","lvl7":"JP - FS - EBU1 - TEL1 - RVP","total":58,"owned":32,"owned_rate":43.5,"owned_rate_cnt":55.2,"amt_total":375125,"amt_owned":163012},{"ae":"Sayaka Wada","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Katsuyuki Watanabe","lvl7":"JP - FS - EBU1 - BTC2 - RTL - RVP","total":59,"owned":23,"owned_rate":45.7,"owned_rate_cnt":39.0,"amt_total":369355,"amt_owned":168927},{"ae":"Daichi Kotama","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Yusuke Tatsuta","lvl7":"Masaki Sato","total":27,"owned":8,"owned_rate":41.9,"owned_rate_cnt":29.6,"amt_total":365022,"amt_owned":152945},{"ae":"Toshimasa Yamazaki","mgr":"Tomoya Hagino","lvl5":"Seiji Morita","lvl6":"Yoshimoto Futami","lvl7":"Koki Tsutsumi","total":39,"owned":22,"owned_rate":46.8,"owned_rate_cnt":56.4,"amt_total":339957,"amt_owned":159004},{"ae":"Jennifer Kim","mgr":"Takayuki Kobayashi","lvl5":"Jay Park","lvl6":"Choonghwan (Ray) Lee","lvl7":"GunWoong Ji","total":47,"owned":27,"owned_rate":60.1,"owned_rate_cnt":57.4,"amt_total":337616,"amt_owned":203015},{"ae":"Kota Ebine","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Kumiko Makuniya","lvl7":"JP - FS - EBU3 - FINS - FINS1 - RVP","total":35,"owned":28,"owned_rate":46.0,"owned_rate_cnt":80.0,"amt_total":287576,"amt_owned":132246},{"ae":"Yuta Goto","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Katsuyuki Watanabe","lvl7":"JP - FS - EBU1 - BTC2 - RTL - RVP","total":59,"owned":22,"owned_rate":42.3,"owned_rate_cnt":37.3,"amt_total":278947,"amt_owned":117865},{"ae":"Miyu Asai","mgr":"Koji Maeda","lvl5":"Takashi Itoh","lvl6":"Koji Maeda","lvl7":"JP - PS1 - RVP","total":31,"owned":31,"owned_rate":100.0,"owned_rate_cnt":100.0,"amt_total":278585,"amt_owned":278585},{"ae":"Ryoken Goto","mgr":"Masahiro Kamiya","lvl5":"Seiji Morita","lvl6":"Tsuyoshi Ooka","lvl7":"Norihiro Yamazaki","total":26,"owned":15,"owned_rate":67.5,"owned_rate_cnt":57.7,"amt_total":278402,"amt_owned":188010},{"ae":"Kota Sakai","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Kumiko Makuniya","lvl7":"Jun Nakajima","total":44,"owned":15,"owned_rate":33.3,"owned_rate_cnt":34.1,"amt_total":249829,"amt_owned":83305},{"ae":"Yusuke Kudo","mgr":"Yukari Nitta","lvl5":"Ryo Ichimaru","lvl6":"Hiroki Seki","lvl7":"Koji Yamaoka","total":48,"owned":31,"owned_rate":77.0,"owned_rate_cnt":64.6,"amt_total":248649,"amt_owned":191441},{"ae":"Takayoshi Okimoto","mgr":"Yukari Nitta","lvl5":"Takafumi Fukushima","lvl6":"Junya Tanaka","lvl7":"Yumiko Tokumasa","total":120,"owned":3,"owned_rate":1.3,"owned_rate_cnt":2.5,"amt_total":246402,"amt_owned":3230},{"ae":"Jaewoo Kim","mgr":"Takayuki Kobayashi","lvl5":"Takafumi Fukushima","lvl6":"Young Kyoon Kim","lvl7":"ANL - JP - SKR - EBU1 - HIGHTECH - MGR","total":65,"owned":0,"owned_rate":0.0,"owned_rate_cnt":0.0,"amt_total":245783,"amt_owned":0},{"ae":"Toi Onodera","mgr":"Tomoya Hagino","lvl5":"Seiji Morita","lvl6":"Yoshimoto Futami","lvl7":"Kiyohiko Hinata","total":39,"owned":26,"owned_rate":29.6,"owned_rate_cnt":66.7,"amt_total":238475,"amt_owned":70589},{"ae":"Airi Asae","mgr":"Masahiro Kamiya","lvl5":"Takafumi Fukushima","lvl6":"Junya Tanaka","lvl7":"Yuki Suzuki","total":156,"owned":103,"owned_rate":53.9,"owned_rate_cnt":66.0,"amt_total":233847,"amt_owned":126033},{"ae":"Seiichi Tsukuda","mgr":"Yoshiaki Yamamoto","lvl5":"Takafumi Fukushima","lvl6":"ANL - JP - EBU3 - RVP","lvl7":"Junki Tsuchiya","total":59,"owned":2,"owned_rate":0.6,"owned_rate_cnt":3.4,"amt_total":223396,"amt_owned":1286},{"ae":"Taishi Yoshioka","mgr":"Kana Hayakawa","lvl5":"Hidenori Tamura","lvl6":"Takeshi Narishima","lvl7":"Kana Hayakawa","total":39,"owned":39,"owned_rate":100.0,"owned_rate_cnt":100.0,"amt_total":219129,"amt_owned":219129},{"ae":"Chiaki Ishida","mgr":"Yoshiaki Yamamoto","lvl5":"Takafumi Fukushima","lvl6":"ANL - JP - EBU3 - RVP","lvl7":"Shintaro Sue","total":58,"owned":4,"owned_rate":3.8,"owned_rate_cnt":6.9,"amt_total":201335,"amt_owned":7572},{"ae":"Takayuki Kobayashi","mgr":"Takayuki Kobayashi","lvl5":"Takafumi Fukushima","lvl6":"Young Kyoon Kim","lvl7":"Jinwook Oh","total":69,"owned":0,"owned_rate":0.0,"owned_rate_cnt":0.0,"amt_total":180405,"amt_owned":0},{"ae":"Hikari Matsumoto","mgr":"Tomoya Hagino","lvl5":"Seiji Morita","lvl6":"Yoshimoto Futami","lvl7":"Keisuke Sakamaki","total":43,"owned":25,"owned_rate":42.5,"owned_rate_cnt":58.1,"amt_total":151902,"amt_owned":64518},{"ae":"Ichita Obara","mgr":"Yuta Hatanaka","lvl5":"Ryo Ichimaru","lvl6":"Akihiko Murai","lvl7":"JP - FS - EBU1 - TEL1 - RVP","total":17,"owned":1,"owned_rate":0.6,"owned_rate_cnt":5.9,"amt_total":142410,"amt_owned":919},{"ae":"Mai Kunihiro","mgr":"Yoshiaki Yamamoto","lvl5":"Hidenori Tamura","lvl6":"Kouhei Akutsu","lvl7":"Ken Yaotani","total":11,"owned":6,"owned_rate":45.0,"owned_rate_cnt":54.5,"amt_total":117371,"amt_owned":52809},{"ae":"Tomoya Hagino","mgr":"Tomoya Hagino","lvl5":"Seiji Morita","lvl6":"Yoshimoto Futami","lvl7":"Kiyohiko Hinata","total":10,"owned":0,"owned_rate":0.0,"owned_rate_cnt":0.0,"amt_total":69571,"amt_owned":0},{"ae":"Masaaki Hino","mgr":"Kiyohiko Hinata","lvl5":"Seiji Morita","lvl6":"Yoshimoto Futami","lvl7":"Kiyohiko Hinata","total":13,"owned":13,"owned_rate":100.0,"owned_rate_cnt":100.0,"amt_total":45582,"amt_owned":45582},{"ae":"Yasuyuki Mukaikawa","mgr":"Takayuki Kobayashi","lvl5":"Takashi Itoh","lvl6":"Koji Maeda","lvl7":"Shinsuke Yamanaka","total":33,"owned":7,"owned_rate":50.1,"owned_rate_cnt":21.2,"amt_total":44874,"amt_owned":22482},{"ae":"Chisato Hoshino","mgr":"Yoshiaki Yamamoto","lvl5":"Takafumi Fukushima","lvl6":"ANL - JP - EBU3 - RVP","lvl7":"Junki Tsuchiya","total":10,"owned":10,"owned_rate":100.0,"owned_rate_cnt":100.0,"amt_total":18025,"amt_owned":18025},{"ae":"TOSHIKI TANIKAGA","mgr":"","lvl5":"Takafumi Fukushima","lvl6":"Junya Tanaka","lvl7":"Yumiko Tokumasa","total":6,"owned":6,"owned_rate":100.0,"owned_rate_cnt":100.0,"amt_total":9155,"amt_owned":9155},{"ae":"Dami Yu3","mgr":"Wonsuk Yang","lvl5":"Takafumi Fukushima","lvl6":"Young Kyoon Kim","lvl7":"Jinwook Oh","total":7,"owned":7,"owned_rate":100.0,"owned_rate_cnt":100.0,"amt_total":7686,"amt_owned":7686}];
+
+function groupOf(d) {
+  if (d.owned_rate >= 50) return "牽引";
+  if (d.owned_rate >= 30) return "ボリューム";
+  return "課題";
+}
+const G_LABEL = { 牽引:"Owned牽引 ≥50%", ボリューム:"ボリュームZone 30–49%", 課題:"課題あり <30%" };
+
+// ECS Mgr別カラー（LVL7チャートと同じ定義）
+const MGR_COLOR_DEFS = {
+  "Masahiro Kamiya":   "#2a78d6",
+  "Yoshiaki Yamamoto": "#eb6834",
+  "Yukari Nitta":      "#1baf7a",
+  "Yuta Hatanaka":     "#9b5de5",
+  "Tomoya Hagino":     "#eda100",
+  "Takayuki Kobayashi":"#e34948"
+};
+const MGR_COLOR_FALLBACK = "#898781";
+
+function mgrColor(d) { return MGR_COLOR_DEFS[d.mgr] || MGR_COLOR_FALLBACK; }
+function fmt(n) { return n.toLocaleString("ja-JP"); }
+
+// ---- SVG設定 ----
+const W = 1100, H = 620;
+const PAD = { top: 44, right: 56, bottom: 56, left: 80 };
+const PW = W - PAD.left - PAD.right, PH = H - PAD.top - PAD.bottom;
+
+const xMin = 0, xMax = 100;
+const yMax = 1500000;
+const yMin = 0;
+
+function sx(v) { return PAD.left + (v - xMin) / (xMax - xMin) * PW; }
+function sy(v) { return PAD.top + PH - (v - yMin) / (yMax - yMin) * PH; }
+const maxOwned = Math.max(...RAW.map(d => d.amt_owned));
+function sr(v) { return 3 + Math.pow(v / maxOwned, 0.55) * 28; }
+
+const xTicks = [0,10,20,30,40,50,60,70,80,90,100];
+const yTicks = [0,250000,500000,750000,1000000,1250000,1500000];
+
+// フィルター用一覧
+const ALL_LVL5 = [...new Set(RAW.map(d => d.lvl5))].sort();
+const ALL_LVL6 = [...new Set(RAW.map(d => d.lvl6))].sort();
+const ALL_MGRS_FILTER = [...new Set(RAW.filter(d => d.mgr).map(d => d.mgr))].sort();
+
+let activeLVL5 = new Set(ALL_LVL5);
+let activeLVL6 = new Set(ALL_LVL6);
+let activeMGRS = new Set(ALL_MGRS_FILTER);
+
+// ---- 凡例生成 ----
+const legendEl = document.getElementById("mgr-legend");
+// まず既知6Mgrを順番通りに、その後その他
+const orderedMgrs = Object.keys(MGR_COLOR_DEFS).filter(m => ALL_MGRS_FILTER.includes(m));
+const otherMgrs = ALL_MGRS_FILTER.filter(m => !MGR_COLOR_DEFS[m]);
+[...orderedMgrs, ...otherMgrs].forEach(mgr => {
+  const color = MGR_COLOR_DEFS[mgr] || MGR_COLOR_FALLBACK;
+  const el = document.createElement("div");
+  el.className = "legend-group";
+  el.innerHTML = `<span class="legend-dot" style="background:${color}"></span>${mgr.split(/\s+/).pop()}`;
+  legendEl.insertBefore(el, legendEl.querySelector(".legend-sep"));
+});
+
+// ---- フィルター構築 ----
+function buildFilterRow(containerId, allValues, activeSet, labelKey, useFullName) {
+  const container = document.getElementById(containerId);
+  // Allボタン
+  const allBtn = document.createElement("button");
+  allBtn.className = "filter-btn active";
+  allBtn.setAttribute("data-flm", "__all__");
+  allBtn.textContent = "All";
+  allBtn.addEventListener("click", () => {
+    allValues.forEach(v => activeSet.add(v));
+    container.querySelectorAll(".filter-btn:not([data-flm='__all__'])").forEach(b => b.classList.add("active"));
+    allBtn.classList.add("active");
+    render();
+  });
+  container.appendChild(allBtn);
+
+  allValues.forEach(val => {
+    const btn = document.createElement("button");
+    btn.className = "filter-btn active";
+    if (useFullName) {
+      btn.textContent = val;
+    } else {
+      const parts = val.split(/\s+/);
+      btn.textContent = parts[parts.length - 1];
+    }
+    btn.title = val;
+    btn.addEventListener("click", e => {
+      if (e.shiftKey) {
+        // Shift+クリック: このひとつだけアクティブ
+        allValues.forEach(v => activeSet.delete(v));
+        activeSet.add(val);
+        container.querySelectorAll(".filter-btn:not([data-flm='__all__'])").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        allBtn.classList.remove("active");
+      } else {
+        if (activeSet.has(val)) {
+          activeSet.delete(val);
+          btn.classList.remove("active");
+        } else {
+          activeSet.add(val);
+          btn.classList.add("active");
+        }
+        const allActive = allValues.every(v => activeSet.has(v));
+        allBtn.classList.toggle("active", allActive);
+      }
+      render();
+    });
+    container.appendChild(btn);
+  });
+}
+
+buildFilterRow("lvl5-filter", ALL_LVL5, activeLVL5, "lvl5", false);
+buildFilterRow("lvl6-filter", ALL_LVL6, activeLVL6, "lvl6", false);
+buildFilterRow("mgr-filter", ALL_MGRS_FILTER, activeMGRS, "mgr", true);
+
+// ---- SVG構築 ----
+function buildSVG(data) {
+  const p = [];
+  p.push(`<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">`);
+
+  // ゾーン背景
+  const zones = [
+    { label:"課題", xFrom:xMin, xTo:30, color:"#1baf7a" },
+    { label:"ボリューム", xFrom:30, xTo:50, color:"#eb6834" },
+    { label:"牽引", xFrom:50, xTo:xMax, color:"#2a78d6" }
+  ];
+  zones.forEach(z => {
+    const x1 = sx(z.xFrom), x2 = sx(z.xTo);
+    p.push(`<rect x="${x1}" y="${PAD.top}" width="${x2-x1}" height="${PH}" fill="${z.color}" opacity="0.04"/>`);
+    p.push(`<text x="${(x1+x2)/2}" y="${PAD.top + PH + 28}" text-anchor="middle" font-size="10" fill="${z.color}" opacity="0.7" font-family="system-ui,sans-serif">${z.label}</text>`);
+  });
+
+  // グリッド
+  xTicks.forEach(v => {
+    const x = sx(v);
+    const isZone = [30, 50].includes(v);
+    p.push(`<line x1="${x}" y1="${PAD.top}" x2="${x}" y2="${PAD.top+PH}" stroke="${isZone ? '#c3c2b7' : '#e1e0d9'}" stroke-width="${isZone?1.5:1}"/>`);
+    p.push(`<text x="${x}" y="${PAD.top+PH+15}" text-anchor="middle" font-size="11" fill="#898781" font-family="system-ui,sans-serif">${v}%</text>`);
+  });
+  yTicks.forEach(v => {
+    const y = sy(v);
+    const label = v === 0 ? '$0' : v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : `$${(v/1000).toFixed(0)}k`;
+    p.push(`<line x1="${PAD.left}" y1="${y}" x2="${PAD.left+PW}" y2="${y}" stroke="#e1e0d9" stroke-width="1"/>`);
+    p.push(`<text x="${PAD.left-8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="11" fill="#898781" font-family="system-ui,sans-serif">${label}</text>`);
+  });
+
+  // 軸タイトル
+  p.push(`<text x="${PAD.left+PW/2}" y="${H-4}" text-anchor="middle" font-size="11" fill="#52514e" font-family="system-ui,sans-serif">Owned Rate（%）</text>`);
+  p.push(`<text x="${12}" y="${PAD.top+PH/2}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#52514e" font-family="system-ui,sans-serif" transform="rotate(-90,12,${PAD.top+PH/2})">BCO総額（$）</text>`);
+
+  // バブル（owned_rateの低い順→前面に高いものが来る）
+  const sorted = [...data].sort((a, b) => b.owned_rate - a.owned_rate);
+  sorted.forEach(d => {
+    const cx = sx(d.owned_rate);
+    const cy = sy(Math.min(d.amt_total, yMax));
+    const r  = sr(d.amt_owned);
+    const col = mgrColor(d);
+    const lastName = d.ae.split(/\s+/).pop();
+    p.push(`<circle class="bubble" data-ae="${d.ae}" cx="${cx}" cy="${cy}" r="${r}" fill="${col}" fill-opacity="0.75" stroke="${col}" stroke-width="1.2" stroke-opacity="0.9" style="cursor:pointer"/>`);
+    // ラベル: バブルサイズが一定以上のみ
+    if (r >= 10) {
+      p.push(`<text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" font-size="${Math.min(10, r*0.75)}" fill="#fff" font-weight="600" font-family="system-ui,sans-serif" pointer-events="none">${lastName}</text>`);
+    }
+  });
+
+  p.push('</svg>');
+  return p.join('\n');
+}
+
+// ---- レンダリング ----
+const container = document.getElementById('chart-container');
+const tt = document.getElementById('tooltip');
+
+function render() {
+  const filtered = RAW.filter(d =>
+    activeLVL5.has(d.lvl5) &&
+    activeLVL6.has(d.lvl6) &&
+    (!d.mgr || activeMGRS.has(d.mgr))
+  );
+  container.innerHTML = buildSVG(filtered);
+
+  // ツールチップ
+  container.querySelectorAll('.bubble').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      const ae = el.getAttribute('data-ae');
+      const d = RAW.find(r => r.ae === ae);
+      if (!d) return;
+
+      const g = groupOf(d);
+      const gLabel = G_LABEL[g];
+      const amtTotalK = Math.round(d.amt_total / 1000);
+      const amtOwnedK = Math.round(d.amt_owned / 1000);
+
+      // To Go計算
+      const targetRate = d.owned_rate >= 50 ? 80 : d.owned_rate >= 30 ? 60 : 50;
+      const toGoAmt = Math.max(0, d.amt_total * targetRate / 100 - d.amt_owned);
+      const toGoK = Math.round(toGoAmt / 1000);
+      const toGoStr = toGoAmt <= 0
+        ? `達成済み（${targetRate}%）`
+        : `$${toGoK.toLocaleString()}k → ${targetRate}%`;
+
+      // LVL7短縮
+      const lvl7short = (() => {
+        const s = d.lvl7;
+        const clean = s.replace(/^(JP\s*-\s*FS\s*-\s*|ANL\s*-\s*JP\s*-\s*)/i, "");
+        const parts = clean.trim().split(/\s+/);
+        if (parts.length <= 3 && !/^EBU|^FINS|^BTC|^TEL|^INS|^SKR|^RVP/i.test(parts[0])) {
+          return parts[parts.length - 1];
+        }
+        const segs = s.split(/\s*-\s*/);
+        const meaningful = segs.filter(x => !/^(JP|FS|ANL|01|RVP|MGR)$/i.test(x.trim()));
+        return meaningful[meaningful.length - 1]?.trim() || segs[segs.length - 1].trim();
+      })();
+
+      tt.innerHTML = `
+        <strong>${d.ae}</strong>
+        <div class="tt-mgr" style="color:${mgrColor(d)}">${d.mgr || '—'}</div>
+        <div class="tt-lvl7">LVL7: ${lvl7short}</div>
+        <div class="tt-group">Zone: ${gLabel}</div>
+        <div class="tt-sep"></div>
+        <div class="tt-row"><span class="tt-label">Owned Rate（金額）</span><span class="tt-val">${d.owned_rate.toFixed(1)}%</span></div>
+        <div class="tt-row"><span class="tt-label">Owned Rate（件数）</span><span class="tt-val">${d.owned_rate_cnt.toFixed(1)}%</span></div>
+        <div class="tt-row"><span class="tt-label">BCO総額</span><span class="tt-val">$${amtTotalK.toLocaleString()}k</span></div>
+        <div class="tt-row"><span class="tt-label">Owned金額</span><span class="tt-val">$${amtOwnedK.toLocaleString()}k</span></div>
+        <div class="tt-row"><span class="tt-label">件数</span><span class="tt-val">${d.owned}/${d.total}件</span></div>
+        <div class="tt-sep"></div>
+        <div class="tt-row tt-togo"><span class="tt-label">To Go</span><span class="tt-val">${toGoStr}</span></div>
+      `;
+      tt.classList.add('show');
+    });
+
+    el.addEventListener('mousemove', e => {
+      const x = e.clientX + 14, y = e.clientY - 10;
+      tt.style.left = (x + 280 > window.innerWidth ? e.clientX - 294 : x) + 'px';
+      tt.style.top  = y + 'px';
+    });
+
+    el.addEventListener('mouseleave', () => tt.classList.remove('show'));
+  });
+
+  // データテーブル更新
+  buildTable(filtered);
+}
+
+// ---- データテーブル ----
+function buildTable(data) {
+  const tbl = document.getElementById('data-table');
+  const sorted = [...data].sort((a, b) => b.owned_rate - a.owned_rate);
+  tbl.innerHTML = `
+    <thead><tr>
+      <th>AE</th><th>ECS Mgr</th><th>Owned Rate</th><th>BCO総額</th><th>Owned金額</th><th>件数</th>
+    </tr></thead>
+    <tbody>
+      ${sorted.map(d => {
+        const col = mgrColor(d);
+        const amtTK = Math.round(d.amt_total/1000);
+        const amtOK = Math.round(d.amt_owned/1000);
+        return `<tr>
+          <td>${d.ae}</td>
+          <td><span class="td-dot" style="background:${col}"></span>${d.mgr||'—'}</td>
+          <td style="text-align:right">${d.owned_rate.toFixed(1)}%</td>
+          <td style="text-align:right">$${amtTK.toLocaleString()}k</td>
+          <td style="text-align:right">$${amtOK.toLocaleString()}k</td>
+          <td style="text-align:right">${d.owned}/${d.total}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
