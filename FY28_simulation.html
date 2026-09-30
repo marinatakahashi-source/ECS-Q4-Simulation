@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FY28 ECS Owned Rate Simulation</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --border: #e2e4e9;
+    --text-primary: #1a1d23;
+    --text-secondary: #5a6070;
+    --text-muted: #9199a8;
+    --accent-blue: #2563eb;
+    --accent-blue-light: #eff4ff;
+    --accent-green: #16a34a;
+    --accent-green-light: #f0fdf4;
+    --accent-orange: #ea580c;
+    --cat1: #1d4ed8;
+    --cat2: #60a5fa;
+    --cat3: #166534;
+    --cat4: #4ade80;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-primary); font-size: 14px; }
+  .page { max-width: 1200px; margin: 0 auto; padding: 28px 20px; }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; }
+
+  /* Section divider */
+  .section-title { font-size: 16px; font-weight: 700; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .section-title .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: var(--accent-blue-light); color: var(--accent-blue); }
+
+  .layout { display: grid; grid-template-columns: 310px 1fr; gap: 20px; align-items: start; }
+
+  /* Controls */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+  .panel h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); margin-bottom: 16px; }
+  .qtr-block { margin-bottom: 20px; }
+  .qtr-label { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .param-row { margin-bottom: 10px; }
+  .param-row > label { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+  .slider-row { display: flex; align-items: center; gap: 8px; }
+  .slider-row input[type=range] { flex: 1; height: 4px; accent-color: var(--accent-blue); cursor: pointer; }
+  .num-input { width: 54px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px; font-weight: 600; text-align: right; color: var(--text-primary); background: #f8f9fb; }
+  .num-input:focus { outline: none; border-color: var(--accent-blue); background: #fff; }
+  .num-unit { font-size: 12px; color: var(--text-secondary); width: 14px; }
+
+  /* Results */
+  .results { display: flex; flex-direction: column; gap: 16px; }
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; }
+  .stat .lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 6px; }
+  .stat .val { font-size: 26px; font-weight: 700; line-height: 1; }
+  .stat .sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .stat.highlight .val { color: var(--accent-blue); }
+  .stat.green .val    { color: var(--accent-green); }
+
+  /* Table */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .table-wrap h3 { font-size: 13px; font-weight: 700; padding: 14px 18px 10px; border-bottom: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: #f8f9fb; }
+  th { padding: 8px 12px; text-align: right; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); white-space: nowrap; }
+  th:first-child { text-align: left; }
+  td { padding: 9px 12px; text-align: right; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td:first-child { text-align: left; font-weight: 600; }
+  tr.subtotal td { background: #f0f4ff; font-weight: 700; }
+  .badge { display: inline-block; border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 700; }
+  .badge.up   { background: var(--accent-green-light); color: var(--accent-green); }
+  .badge.down { background: #fff7ed; color: var(--accent-orange); }
+
+  /* Chart */
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 18px 12px; }
+  .chart-wrap h3 { font-size: 13px; font-weight: 700; margin-bottom: 14px; }
+  .chart-inner { display: flex; gap: 12px; align-items: flex-end; }
+  .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .bars { display: flex; gap: 5px; align-items: flex-end; height: 180px; width: 100%; justify-content: center; }
+  .bar-wrap { display: flex; flex-direction: column; align-items: center; }
+  .bar-val { font-size: 10px; font-weight: 600; color: var(--text-secondary); margin-bottom: 2px; white-space: nowrap; }
+  .bar { width: 32px; border-radius: 4px 4px 0 0; position: relative; transition: height .25s ease; cursor: default; }
+  .bar:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    background: #1a1d23; color: #fff; font-size: 11px; white-space: nowrap;
+    padding: 4px 8px; border-radius: 4px; pointer-events: none; z-index: 10;
+  }
+  .bar-label { font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 5px; }
+  .rate-label { font-size: 12px; font-weight: 700; color: var(--accent-blue); }
+  .legend { display: flex; gap: 14px; margin-top: 10px; justify-content: center; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Scenario */
+  .scenario-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .scenario-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: 12px; cursor: pointer; color: var(--text-secondary); font-weight: 500; transition: all .15s; }
+  .scenario-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+  .scenario-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; font-weight: 600; }
+
+  /* Deal Band section */
+  .band-layout { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
+  .band-ctrl-note { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.6; }
+  .band-block { margin-bottom: 18px; }
+  .band-block-label { font-size: 13px; font-weight: 600; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+  .band-block-label .ref { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+  .ratio-note { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* stacked bar for band mix */
+  .stack-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+  .stack-wrap h3 { font-size: 13px; font-weight: 700; margin-bottom: 14px; }
+  .stack-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .stack-bar-label { width: 70px; font-size: 12px; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
+  .stack-bar-outer { flex: 1; height: 28px; background: #f1f5f9; border-radius: 4px; overflow: hidden; display: flex; }
+  .stack-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; transition: width .3s ease; white-space: nowrap; overflow: hidden; }
+  .stack-bar-val { width: 80px; font-size: 12px; font-weight: 600; color: var(--text-primary); flex-shrink: 0; }
+  .band-colors { background-color }
+
+  /* band summary table: wider */
+  .band-results { display: flex; flex-direction: column; gap: 16px; }
+
+  /* FY27 Q3/Q4 input bar */
+  .fy27-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius);
+    padding: 10px 16px; margin-bottom: 14px; font-size: 12px;
+  }
+  .fy27-bar-label { font-size: 11px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+  .fy27-item { display: flex; align-items: center; gap: 6px; }
+  .fy27-q { font-size: 12px; font-weight: 700; color: #b45309; width: 22px; }
+  .fy27-item label { font-size: 11px; color: var(--text-secondary); }
+  .fy27-prefix { font-size: 12px; color: var(--text-secondary); }
+  .fy27-input { width: 68px; padding: 3px 6px; border: 1px solid #fcd34d; border-radius: 5px; font-size: 13px; font-weight: 600; text-align: right; background: #fffdf0; color: var(--text-primary); }
+  .fy27-input.fy27-pct { width: 48px; }
+  .fy27-input:focus { outline: none; border-color: #f59e0b; background: #fff; }
+  .fy27-unit { font-size: 11px; color: var(--text-secondary); }
+  .fy27-sep { width: 1px; height: 24px; background: #fcd34d; margin: 0 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>FY28 ECS Owned Rate Simulation</h1>
+  <p class="subtitle">FY27実績をベースにGrowth率・Owned Rateを四半期ごとに設定してFY28着地を試算　（HC = 60人）</p>
+
+  <!-- ----------------------------------- SECTION 1: Quarterly ----------------------------------- -->
+  <div class="section-title">Section 1 <span class="tag">四半期別シミュレーション</span></div>
+
+  <div class="fy27-bar">
+    <span class="fy27-bar-label">FY27 Q3・Q4 想定値（Base）:</span>
+    <div class="fy27-item">
+      <span class="fy27-q">Q3</span>
+      <label>BCO</label>
+      <span class="fy27-prefix">$</span><input type="number" class="fy27-input" id="fy27bco_2" value="22000" min="0" max="100000" step="100" oninput="recalcAll()"><span class="fy27-unit">k</span>
+      <label>Own%</label>
+      <input type="number" class="fy27-input fy27-pct" id="fy27rate_2" value="50" min="0" max="100" step="1" oninput="recalcAll()"><span class="fy27-unit">%</span>
+    </div>
+    <div class="fy27-sep"></div>
+    <div class="fy27-item">
+      <span class="fy27-q">Q4</span>
+      <label>BCO</label>
+      <span class="fy27-prefix">$</span><input type="number" class="fy27-input" id="fy27bco_3" value="24000" min="0" max="100000" step="100" oninput="recalcAll()"><span class="fy27-unit">k</span>
+      <label>Own%</label>
+      <input type="number" class="fy27-input fy27-pct" id="fy27rate_3" value="55" min="0" max="100" step="1" oninput="recalcAll()"><span class="fy27-unit">%</span>
+    </div>
+  </div>
+
+  <div class="scenario-bar">
+    <span style="font-size:12px;color:var(--text-secondary)">FY28シナリオ:</span>
+    <button class="scenario-btn" onclick="applyScenario('base',this)">Base（FY27並み）</button>
+    <button class="scenario-btn" onclick="applyScenario('stretch',this)">Stretch（成長）</button>
+    <button class="scenario-btn" onclick="applyScenario('conservative',this)">Conservative</button>
+    <button class="scenario-btn" onclick="applyScenario('reset',this)">リセット</button>
+  </div>
+
+  <div class="layout">
+    <div class="panel">
+      <h2>FY28 パラメータ設定</h2>
+      <div id="controls"></div>
+    </div>
+    <div class="results">
+      <div class="stat-row" id="stats"></div>
+      <div class="chart-wrap">
+        <h3>四半期別 BCO・Owned（$k）</h3>
+        <div class="chart-inner" id="chart"></div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#cbd5e1"></div>BCO（FY28）</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--cat1)"></div>Owned（FY28）</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d1fae5;border:1px solid #6ee7b7"></div>Owned（FY27実績）</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <h3>四半期別サマリー</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Quarter</th>
+              <th>BCO ($k)</th>
+              <th>FY27比</th>
+              <th>Owned ($k)</th>
+              <th>Owned%</th>
+              <th>FY27 Own%</th>
+              <th>BCO/HC</th>
+              <th>Own/HC</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ----------------------------------- SECTION 2: Deal Band ----------------------------------- -->
+  <div class="section-title">Section 2 <span class="tag">Deal Band ブレイクダウン</span>
+    <span style="font-size:12px;font-weight:400;color:var(--text-secondary);margin-left:8px;">FY28 Full year BCO をDeal Band比率で按分し、Band別Owned Rateをシミュレーション</span>
+  </div>
+
+  <div class="band-layout">
+    <!-- Band controls -->
+    <div class="panel">
+      <h2>Deal Band パラメータ</h2>
+      <p class="band-ctrl-note">
+        FY26実績の金額比率: <b>0-10k 23% / 10-25k 24% / 25-50k 26% / 50-100k 27%</b><br>
+        各Bandの比率（合計100%）とOwned Rateを設定してください。
+      </p>
+      <div id="band-controls"></div>
+      <div style="margin-top:8px;padding:10px 12px;background:#f8f9fb;border-radius:6px;border:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">比率合計</div>
+        <div id="ratio-total" style="font-size:18px;font-weight:700;color:var(--accent-blue)">100%</div>
+      </div>
+    </div>
+
+    <!-- Band results -->
+    <div class="band-results">
+      <div class="stat-row" id="band-stats"></div>
+      <div class="stack-wrap">
+        <h3>BCO構成（Deal Band別）</h3>
+        <div id="stack-chart"></div>
+        <div class="legend" style="margin-top:14px;">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--cat1)"></div>0-10k</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--cat2)"></div>10-25k</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--cat3)"></div>25-50k</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--cat4)"></div>50-100k</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <h3>Deal Band別サマリー（FY28 Full year）</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Deal Band</th>
+              <th>比率</th>
+              <th>BCO件数</th>
+              <th>BCO ($k)</th>
+              <th>Owned Rate</th>
+              <th>Own件数</th>
+              <th>Owned ($k)</th>
+              <th>FY26 Own%</th>
+              <th>FY27 Own%</th>
+              <th>Own($k) YoY</th>
+              <th>Own件数 YoY</th>
+              <th>BCO/HC ($k)</th>
+              <th>Own/HC ($k)</th>
+            </tr>
+          </thead>
+          <tbody id="band-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const HC = 60;
+
+// --- Section 1 data ---
+// Q1/Q2: actual results (fixed). Q3/Q4: user-editable estimates (read from UI).
+const FY27_FIXED = [
+  { q: 'Q1', bco: 25909, own: 7032,  rate: 27 },
+  { q: 'Q2', bco: 22286, own: 9922,  rate: 45 },
+  { q: 'Q3', bco: 22000, own: 11000, rate: 50 },  // default estimate
+  { q: 'Q4', bco: 24000, own: 13200, rate: 55 },  // default estimate
+];
+
+function getFY27Row(i) {
+  if (i < 2) return FY27_FIXED[i];
+  const bco  = parseFloat(document.getElementById('fy27bco_'+i).value)  || FY27_FIXED[i].bco;
+  const rate = parseFloat(document.getElementById('fy27rate_'+i).value) || FY27_FIXED[i].rate;
+  const own  = Math.round(bco * rate / 100);
+  return { q: FY27_FIXED[i].q, bco, own, rate };
+}
+
+function getFY27Total() {
+  const rows = FY27_FIXED.map((_, i) => getFY27Row(i));
+  const bco  = rows.reduce((s,r)=>s+r.bco, 0);
+  const own  = rows.reduce((s,r)=>s+r.own, 0);
+  return { bco, own, rate: Math.round(own/bco*100) };
+}
+
+// Keep FY27 as alias for build-controls loop
+const FY27 = FY27_FIXED;
+
+const defaults = [
+  { growth: 5, ownedRate: 40 },
+  { growth: 5, ownedRate: 50 },
+  { growth: 5, ownedRate: 55 },
+  { growth: 5, ownedRate: 60 },
+];
+const scenarios = {
+  base:         [{g:5,o:40},{g:5,o:50},{g:5,o:55},{g:5,o:60}],
+  stretch:      [{g:10,o:50},{g:10,o:55},{g:10,o:60},{g:10,o:65}],
+  conservative: [{g:0,o:35},{g:0,o:45},{g:0,o:50},{g:0,o:55}],
+  reset:        defaults.map(d=>({g:d.growth,o:d.ownedRate})),
+};
+
+// --- Section 2 data ---
+const BANDS = [
+  { label: '0-10k',   fy26Rate: 21, fy27Rate: 45, color: 'var(--cat1)', avgUsd: 2393,  fy27mixPct: 23 },
+  { label: '10-25k',  fy26Rate: 16, fy27Rate: 35, color: 'var(--cat2)', avgUsd: 15863, fy27mixPct: 24 },
+  { label: '25-50k',  fy26Rate: 10, fy27Rate: 36, color: 'var(--cat3)', avgUsd: 36433, fy27mixPct: 26 },
+  { label: '50-100k', fy26Rate: 8,  fy27Rate: 30, color: 'var(--cat4)', avgUsd: 69357, fy27mixPct: 27 },
+];
+
+// Compute FY27 Band actuals dynamically (uses current FY27 Q3/Q4 inputs)
+function getFY27BandRow(i) {
+  const fy27total = getFY27Total();
+  const band = BANDS[i];
+  const bco  = Math.round(fy27total.bco * band.fy27mixPct / 100);
+  const bcoN = Math.round(bco * 1000 / band.avgUsd);
+  const ownN = Math.round(bcoN * band.fy27Rate / 100);
+  const own  = Math.round(bcoN * band.fy27Rate / 100 * band.avgUsd / 1000);
+  return { bco, bcoN, ownN, own };
+}
+function getFY27BandTotal() {
+  const rows = BANDS.map((_, i) => getFY27BandRow(i));
+  return {
+    bco:  rows.reduce((s,r)=>s+r.bco,  0),
+    bcoN: rows.reduce((s,r)=>s+r.bcoN, 0),
+    ownN: rows.reduce((s,r)=>s+r.ownN, 0),
+    own:  rows.reduce((s,r)=>s+r.own,  0),
+  };
+}
+
+// FY26金額比率 (%) - デフォルト
+const bandDefaults = [
+  { ratio: 23, ownedRate: 45 },
+  { ratio: 24, ownedRate: 40 },
+  { ratio: 26, ownedRate: 40 },
+  { ratio: 27, ownedRate: 35 },
+];
+
+// --- Helpers ---
+function fmt(n)  { return Math.round(n).toLocaleString(); }
+
+// --- Build Qtr controls ---
+const ctrl = document.getElementById('controls');
+FY27.forEach((row, i) => {
+  const note = i < 2
+    ? '<span style="color:#16a34a;font-size:11px">実績</span>'
+    : '<span style="color:#ea580c;font-size:11px">想定</span>';
+  const lblId = i >= 2 ? `id="fy27lbl_${i}"` : '';
+  ctrl.innerHTML += `
+  <div class="qtr-block">
+    <div class="qtr-label">FY28 ${row.q} ${note}
+      <span ${lblId} style="font-size:11px;color:var(--text-muted);font-weight:400">（FY27: $${fmt(row.bco)}k / ${row.rate}%）</span>
+    </div>
+    <div class="param-row">
+      <label>BCO Growth（FY27比）</label>
+      <div class="slider-row">
+        <input type="range" id="growth_${i}" min="-20" max="50" step="1" value="${defaults[i].growth}"
+          oninput="syncNum('growth_${i}');recalc()">
+        <input type="number" class="num-input" id="growth_${i}_num" min="-20" max="50" value="${defaults[i].growth}"
+          oninput="syncRange('growth_${i}');recalc()">
+        <span class="num-unit">%</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <label>Owned Rate</label>
+      <div class="slider-row">
+        <input type="range" id="owned_${i}" min="10" max="90" step="1" value="${defaults[i].ownedRate}"
+          oninput="syncNum('owned_${i}');recalc()">
+        <input type="number" class="num-input" id="owned_${i}_num" min="10" max="90" value="${defaults[i].ownedRate}"
+          oninput="syncRange('owned_${i}');recalc()">
+        <span class="num-unit">%</span>
+      </div>
+    </div>
+  </div>`;
+});
+
+// --- Build Band controls ---
+const bandCtrl = document.getElementById('band-controls');
+BANDS.forEach((band, i) => {
+  bandCtrl.innerHTML += `
+  <div class="band-block">
+    <div class="band-block-label">
+      <span style="color:${band.color}">*</span> ${band.label}
+      <span class="ref">FY26 Own ${band.fy26Rate}% / FY27 Own ${band.fy27Rate}%</span>
+    </div>
+    <div class="param-row">
+      <label>BCO比率（金額%）</label>
+      <div class="slider-row">
+        <input type="range" id="bratio_${i}" min="0" max="60" step="1" value="${bandDefaults[i].ratio}"
+          oninput="syncNum('bratio_${i}');recalcBand()">
+        <input type="number" class="num-input" id="bratio_${i}_num" min="0" max="60" value="${bandDefaults[i].ratio}"
+          oninput="syncRange('bratio_${i}');recalcBand()">
+        <span class="num-unit">%</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <label>Owned Rate</label>
+      <div class="slider-row">
+        <input type="range" id="bowned_${i}" min="0" max="95" step="1" value="${bandDefaults[i].ownedRate}"
+          oninput="syncNum('bowned_${i}');recalcBand()">
+        <input type="number" class="num-input" id="bowned_${i}_num" min="0" max="95" value="${bandDefaults[i].ownedRate}"
+          oninput="syncRange('bowned_${i}');recalcBand()">
+        <span class="num-unit">%</span>
+      </div>
+    </div>
+  </div>`;
+});
+
+// --- Sync helpers ---
+function syncNum(id) {
+  document.getElementById(id + '_num').value = document.getElementById(id).value;
+}
+function syncRange(id) {
+  const num = document.getElementById(id + '_num');
+  const range = document.getElementById(id);
+  const v = Math.min(parseFloat(range.max), Math.max(parseFloat(range.min), parseFloat(num.value) || 0));
+  num.value = v; range.value = v;
+}
+
+// --- Scenario ---
+function applyScenario(key, btn) {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const s = scenarios[key];
+  FY27.forEach((_, i) => {
+    document.getElementById(`growth_${i}`).value     = s[i].g;
+    document.getElementById(`growth_${i}_num`).value = s[i].g;
+    document.getElementById(`owned_${i}`).value      = s[i].o;
+    document.getElementById(`owned_${i}_num`).value  = s[i].o;
+  });
+  recalc();
+}
+
+// --- Section 1: Quarterly recalc ---
+function getQtrRows() {
+  return FY27_FIXED.map((_, i) => {
+    const fy27 = getFY27Row(i);
+    const g = parseFloat(document.getElementById(`growth_${i}`).value) / 100;
+    const o = parseFloat(document.getElementById(`owned_${i}`).value) / 100;
+    const bco = Math.round(fy27.bco * (1 + g));
+    const own = Math.round(bco * o);
+    return { q: 'FY28 '+fy27.q, bco, own, rate: Math.round(o*100), fy27bco: fy27.bco, fy27own: fy27.own, fy27rate: fy27.rate };
+  });
+}
+
+function recalcAll() { recalc(); }
+
+function recalc() {
+  const FY27_TOTAL = getFY27Total();
+  const rows = getQtrRows();
+  const total = { bco: rows.reduce((s,r)=>s+r.bco,0), own: rows.reduce((s,r)=>s+r.own,0) };
+  total.rate = Math.round(total.own / total.bco * 100);
+
+  // Update FY27 Q3/Q4 label in controls dynamically
+  [2,3].forEach(i => {
+    const el = document.getElementById('fy27lbl_'+i);
+    if (el) {
+      const r = getFY27Row(i);
+      el.textContent = '（FY27: $'+fmt(r.bco)+'k / '+r.rate+'%）';
+    }
+  });
+
+  const ownDelta  = total.rate - FY27_TOTAL.rate;
+  const bcoDelta  = Math.round((total.bco - FY27_TOTAL.bco) / FY27_TOTAL.bco * 100);
+  const ownGrowth = Math.round((total.own - FY27_TOTAL.own) / FY27_TOTAL.own * 100);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat highlight">
+      <div class="lbl">FY28 BCO</div>
+      <div class="val">$${Math.round(total.bco/1000)}M</div>
+      <div class="sub">FY27比 <b>${bcoDelta>=0?'+':''}${bcoDelta}%</b>（$${fmt(total.bco)}k）</div>
+    </div>
+    <div class="stat green">
+      <div class="lbl">FY28 Owned</div>
+      <div class="val">$${Math.round(total.own/1000)}M</div>
+      <div class="sub">FY27比 <b>${ownGrowth>=0?'+':''}${ownGrowth}%</b>（$${fmt(total.own)}k）</div>
+    </div>
+    <div class="stat">
+      <div class="lbl">FY28 Owned Rate</div>
+      <div class="val" style="color:${total.rate>=50?'var(--accent-green)':total.rate>=40?'var(--accent-blue)':'var(--accent-orange)'}">${total.rate}%</div>
+      <div class="sub">FY27 Full ${FY27_TOTAL.rate}% <b style="color:${ownDelta>=0?'var(--accent-green)':'var(--accent-orange)'}">${ownDelta>=0?'+':''}${ownDelta}pt</b></div>
+    </div>`;
+
+  let html = '';
+  rows.forEach(r => {
+    const bdelta = Math.round((r.bco - r.fy27bco) / r.fy27bco * 100);
+    const rdelta = r.rate - r.fy27rate;
+    html += `<tr>
+      <td>${r.q}</td>
+      <td>${fmt(r.bco)}</td>
+      <td><span class="badge ${bdelta>=0?'up':'down'}">${bdelta>=0?'+':''}${bdelta}%</span></td>
+      <td>${fmt(r.own)}</td>
+      <td><b>${r.rate}%</b></td>
+      <td style="color:var(--text-secondary)">${r.fy27rate}%
+        <span style="color:${rdelta>=0?'var(--accent-green)':'var(--accent-orange)'};font-size:11px;font-weight:700"> ${rdelta>=0?'+':''}${rdelta}pt</span></td>
+      <td>$${fmt(Math.round(r.bco/HC))}k</td>
+      <td>$${fmt(Math.round(r.own/HC))}k</td>
+    </tr>`;
+  });
+  const bdeltaTotal = Math.round((total.bco - FY27_TOTAL.bco) / FY27_TOTAL.bco * 100);
+  html += `<tr class="subtotal">
+    <td>FY28 合計</td>
+    <td>${fmt(total.bco)}</td>
+    <td><span class="badge ${bdeltaTotal>=0?'up':'down'}">${bdeltaTotal>=0?'+':''}${bdeltaTotal}%</span></td>
+    <td>${fmt(total.own)}</td>
+    <td><b>${total.rate}%</b></td>
+    <td style="color:var(--text-secondary)">${FY27_TOTAL.rate}%
+      <span style="color:${ownDelta>=0?'var(--accent-green)':'var(--accent-orange)'};font-size:11px;font-weight:700"> ${ownDelta>=0?'+':''}${ownDelta}pt</span></td>
+    <td>$${fmt(Math.round(total.bco/HC))}k</td>
+    <td>$${fmt(Math.round(total.own/HC))}k</td>
+  </tr>`;
+  document.getElementById('tbody').innerHTML = html;
+
+  // Chart
+  const maxVal = Math.max(...rows.map(r=>r.bco), ...FY27.map(r=>r.bco)) * 1.15;
+  const H = 180;
+  let chartHtml = '';
+  rows.forEach((r, i) => {
+    const fy27 = FY27[i];
+    const hBco  = Math.max(2, Math.round(r.bco    / maxVal * H));
+    const hOwn  = Math.max(2, Math.round(r.own    / maxVal * H));
+    const hF27o = Math.max(2, Math.round(fy27.own / maxVal * H));
+    chartHtml += `
+    <div class="bar-group">
+      <div class="bars">
+        <div class="bar-wrap">
+          <div class="bar-val" style="color:var(--text-muted)">$${(r.bco/1000).toFixed(1)}M</div>
+          <div class="bar" style="height:${hBco}px;background:#cbd5e1" data-tip="${r.q} BCO: $${fmt(r.bco)}k"></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-val" style="color:var(--cat1)">$${(r.own/1000).toFixed(1)}M</div>
+          <div class="bar" style="height:${hOwn}px;background:var(--cat1)" data-tip="${r.q} Owned: $${fmt(r.own)}k (${r.rate}%)"></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-val" style="color:#6ee7b7">$${(fy27.own/1000).toFixed(1)}M</div>
+          <div class="bar" style="height:${hF27o}px;background:#d1fae5;border:1px solid #6ee7b7" data-tip="FY27 ${fy27.q} Owned: $${fmt(fy27.own)}k (${fy27.rate}%)"></div>
+        </div>
+      </div>
+      <div class="bar-label">${r.q}</div>
+      <div class="rate-label">${r.rate}%</div>
+    </div>`;
+  });
+  document.getElementById('chart').innerHTML = chartHtml;
+
+  // Sync band total BCO
+  recalcBand();
+}
+
+// --- Section 2: Band recalc ---
+function recalcBand() {
+  // Get FY28 full year BCO from Qtr section
+  const qtrRows = getQtrRows();
+  const totalBco = qtrRows.reduce((s,r) => s+r.bco, 0);
+
+  const ratios = BANDS.map((_,i) => parseFloat(document.getElementById(`bratio_${i}`).value)||0);
+  const ownedRates = BANDS.map((_,i) => parseFloat(document.getElementById(`bowned_${i}`).value)||0);
+  const ratioSum = ratios.reduce((s,v)=>s+v, 0);
+
+  // Update ratio total indicator
+  const rtEl = document.getElementById('ratio-total');
+  rtEl.textContent = ratioSum + '%';
+  rtEl.style.color = Math.abs(ratioSum - 100) <= 1 ? 'var(--accent-green)' : 'var(--accent-orange)';
+
+  // Compute per-band BCO (normalize if sum != 100)
+  const norm = ratioSum > 0 ? ratioSum / 100 : 1;
+  const bandRows = BANDS.map((band, i) => {
+    const bco    = Math.round(totalBco * (ratios[i] / 100) / norm);
+    const own    = Math.round(bco * ownedRates[i] / 100);
+    const bcoN   = Math.round(bco * 1000 / band.avgUsd);   // BCO件数（FY27平均単価で推計）
+    const ownN   = Math.round(bcoN * ownedRates[i] / 100); // Owned件数
+    return { label: band.label, ratio: ratios[i], bco, own, bcoN, ownN, ownRate: ownedRates[i], fy26Rate: band.fy26Rate, fy27Rate: band.fy27Rate, color: band.color };
+  });
+  const bandTotal = { bco: bandRows.reduce((s,r)=>s+r.bco,0), own: bandRows.reduce((s,r)=>s+r.own,0) };
+  bandTotal.ownRate = bandTotal.bco > 0 ? Math.round(bandTotal.own/bandTotal.bco*100) : 0;
+
+  // Stat tiles
+  const qtrTotal = { bco: totalBco, own: qtrRows.reduce((s,r)=>s+r.own,0) };
+  qtrTotal.rate = Math.round(qtrTotal.own/qtrTotal.bco*100);
+  document.getElementById('band-stats').innerHTML = `
+    <div class="stat highlight">
+      <div class="lbl">FY28 BCO（全体）</div>
+      <div class="val">$${Math.round(totalBco/1000)}M</div>
+      <div class="sub">Section 1の合計値を使用</div>
+    </div>
+    <div class="stat green">
+      <div class="lbl">Band別 Owned合計</div>
+      <div class="val">$${Math.round(bandTotal.own/1000)}M</div>
+      <div class="sub">$${fmt(bandTotal.own)}k</div>
+    </div>
+    <div class="stat">
+      <div class="lbl">加重平均 Owned Rate</div>
+      <div class="val" style="color:${bandTotal.ownRate>=50?'var(--accent-green)':bandTotal.ownRate>=40?'var(--accent-blue)':'var(--accent-orange)'}">${bandTotal.ownRate}%</div>
+      <div class="sub">Section 1合計: ${qtrTotal.rate}%</div>
+    </div>`;
+
+  // Stacked bar chart
+  let stackHtml = '';
+  const labels = ['FY26実績比率', 'FY28想定比率'];
+  const fy26Ratios = [23, 24, 26, 27];
+  [fy26Ratios, ratios].forEach((rArr, li) => {
+    const rSum = rArr.reduce((s,v)=>s+v,0) || 1;
+    stackHtml += `<div class="stack-bar-row">
+      <div class="stack-bar-label">${labels[li]}</div>
+      <div class="stack-bar-outer">`;
+    const darkText = ['#1d4ed8','#166534'];  // dark bg ? white text
+    BANDS.forEach((band, i) => {
+      const pct = Math.round(rArr[i] / rSum * 100);
+      const txtColor = darkText.includes(band.color) ? '#fff' : '#1a1d23';
+      stackHtml += `<div class="stack-seg" style="width:${pct}%;background:${band.color};color:${txtColor}" data-tip="${band.label}: ${pct}%">${pct >= 8 ? pct+'%' : ''}</div>`;
+    });
+    stackHtml += `</div>
+      <div class="stack-bar-val">${rSum}%</div>
+    </div>`;
+  });
+  document.getElementById('stack-chart').innerHTML = stackHtml;
+
+  // Band table
+  const bandTotalN = { bco: bandRows.reduce((s,r)=>s+r.bcoN,0), own: bandRows.reduce((s,r)=>s+r.ownN,0) };
+  const fy27BandTotal = getFY27BandTotal();
+  let html = '';
+  const BAND_COLORS_CSS = ['var(--cat1)','var(--cat2)','var(--cat3)','var(--cat4)'];
+  bandRows.forEach((r, i) => {
+    const fy26d = r.ownRate - r.fy26Rate;
+    const fy27d = r.ownRate - r.fy27Rate;
+    const fy27b = getFY27BandRow(i);
+    const ownDiffAmt = r.own  - fy27b.own;
+    const ownDiffN   = r.ownN - fy27b.ownN;
+    const ownAmtGrowth = fy27b.own  > 0 ? Math.round(ownDiffAmt / fy27b.own  * 100) : 0;
+    const ownNGrowth   = fy27b.ownN > 0 ? Math.round(ownDiffN   / fy27b.ownN * 100) : 0;
+    html += `<tr>
+      <td><span style="color:${BAND_COLORS_CSS[i]};font-weight:700">${r.label}</span></td>
+      <td>${Math.round(r.ratio/norm)}%</td>
+      <td>${fmt(r.bcoN)}</td>
+      <td>${fmt(r.bco)}</td>
+      <td><b>${r.ownRate}%</b></td>
+      <td>${fmt(r.ownN)}</td>
+      <td>${fmt(r.own)}</td>
+      <td style="color:var(--text-secondary)">${r.fy26Rate}%
+        <span style="color:${fy26d>=0?'var(--accent-green)':'var(--accent-orange)'};font-size:11px;font-weight:700"> ${fy26d>=0?'+':''}${fy26d}pt</span></td>
+      <td style="color:var(--text-secondary)">${r.fy27Rate}%
+        <span style="color:${fy27d>=0?'var(--accent-green)':'var(--accent-orange)'};font-size:11px;font-weight:700"> ${fy27d>=0?'+':''}${fy27d}pt</span></td>
+      <td style="color:${ownDiffAmt>=0?'var(--accent-green)':'var(--accent-orange)'}">
+        ${ownDiffAmt>=0?'+':''}${fmt(ownDiffAmt)}
+        <span style="font-size:11px;font-weight:600">(${ownAmtGrowth>=0?'+':''}${ownAmtGrowth}%)</span>
+      </td>
+      <td style="color:${ownDiffN>=0?'var(--accent-green)':'var(--accent-orange)'}">
+        ${ownDiffN>=0?'+':''}${fmt(ownDiffN)}
+        <span style="font-size:11px;font-weight:600">(${ownNGrowth>=0?'+':''}${ownNGrowth}%)</span>
+      </td>
+      <td>$${fmt(Math.round(r.bco/HC))}k</td>
+      <td>$${fmt(Math.round(r.own/HC))}k</td>
+    </tr>`;
+  });
+  const ownTotalDiffAmt = bandTotal.own  - fy27BandTotal.own;
+  const ownTotalDiffN   = bandTotalN.own - fy27BandTotal.ownN;
+  const ownTotalAmtGrowth = fy27BandTotal.own  > 0 ? Math.round(ownTotalDiffAmt / fy27BandTotal.own  * 100) : 0;
+  const ownTotalNGrowth   = fy27BandTotal.ownN > 0 ? Math.round(ownTotalDiffN   / fy27BandTotal.ownN * 100) : 0;
+  html += `<tr class="subtotal">
+    <td>合計</td>
+    <td>100%</td>
+    <td>${fmt(bandTotalN.bco)}</td>
+    <td>${fmt(bandTotal.bco)}</td>
+    <td><b>${bandTotal.ownRate}%</b></td>
+    <td>${fmt(bandTotalN.own)}</td>
+    <td>${fmt(bandTotal.own)}</td>
+    <td colspan="2" style="color:var(--text-secondary);font-size:12px">FY26 Owned 13% / FY27 Owned 36%</td>
+    <td style="color:${ownTotalDiffAmt>=0?'var(--accent-green)':'var(--accent-orange)'}">
+      ${ownTotalDiffAmt>=0?'+':''}${fmt(ownTotalDiffAmt)}
+      <span style="font-size:11px;font-weight:600">(${ownTotalAmtGrowth>=0?'+':''}${ownTotalAmtGrowth}%)</span>
+    </td>
+    <td style="color:${ownTotalDiffN>=0?'var(--accent-green)':'var(--accent-orange)'}">
+      ${ownTotalDiffN>=0?'+':''}${fmt(ownTotalDiffN)}
+      <span style="font-size:11px;font-weight:600">(${ownTotalNGrowth>=0?'+':''}${ownTotalNGrowth}%)</span>
+    </td>
+    <td>$${fmt(Math.round(bandTotal.bco/HC))}k</td>
+    <td>$${fmt(Math.round(bandTotal.own/HC))}k</td>
+  </tr>`;
+  document.getElementById('band-tbody').innerHTML = html;
+}
+
+recalc();
+</script>
+</body>
+</html>
