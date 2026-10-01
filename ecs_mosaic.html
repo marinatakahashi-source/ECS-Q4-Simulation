@@ -177,8 +177,9 @@ document.getElementById('kpi-row').innerHTML=`
 const viewModes = {mgr:'prop', team:'prop'};
 
 function renderMosaic(containerId, rows, paneKey){
-  const TOTAL_H = 500;
   const GAP = 2;
+  const MIN_ROW_H = 40;
+  const TOTAL_H = Math.max(500, rows.length * (MIN_ROW_H + GAP) - GAP);
   const mode = viewModes[paneKey];
 
   const bandTotals = {};
@@ -247,12 +248,20 @@ function renderMosaic(containerId, rows, paneKey){
         cell.style.borderLeft = `3px solid ${MGR_COLOR[row.ecs_mgr]}`;
       }
 
-      if(cellH >= 32){
+      if(cellH >= 28){
         const name = paneKey === 'mgr' ? row.label.split(' ').slice(-1)[0] : row.label;
-        cell.innerHTML = `
-          <span class="cell-name" style="color:${fg}">${name}</span>
-          <span class="cell-rate" style="color:${fg}">${v.owned_rate.toFixed(0)}%</span>
-          ${cellH >= 50 ? `<span class="cell-gap" style="color:${fg}">${v.n>0?fmtK(v.gap_amt):''}</span>` : ''}`;
+        if(cellH < 46){
+          cell.innerHTML = `<span class="cell-rate" style="color:${fg};font-size:11px">${v.owned_rate.toFixed(0)}%</span>`;
+        } else if(cellH < 64){
+          cell.innerHTML = `
+            <span class="cell-name" style="color:${fg}">${name}</span>
+            <span class="cell-rate" style="color:${fg}">${v.owned_rate.toFixed(0)}%</span>`;
+        } else {
+          cell.innerHTML = `
+            <span class="cell-name" style="color:${fg}">${name}</span>
+            <span class="cell-rate" style="color:${fg}">${v.owned_rate.toFixed(0)}%</span>
+            <span class="cell-gap" style="color:${fg}">${v.n>0?fmtK(v.gap_amt):''}</span>`;
+        }
       }
       col.appendChild(cell);
     });
