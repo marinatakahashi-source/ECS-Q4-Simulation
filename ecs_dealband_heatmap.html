@@ -39,6 +39,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;font-size:11px;padding
 .tt-row{display:flex;justify-content:space-between;gap:14px;margin-top:2px}
 .tt-lbl{color:#898781}.tt-val{font-weight:600;font-variant-numeric:tabular-nums}
 .tt-sep{border-top:1px solid #e1e0d9;margin:5px 0}
+.tab-bar{display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid #c3c2b7}
+.tab-btn{font-size:13px;font-weight:600;padding:8px 20px;border:none;background:none;cursor:pointer;color:#898781;border-bottom:3px solid transparent;margin-bottom:-2px;font-family:inherit;transition:color .15s}
+.tab-btn.on{color:#0b0b0b;border-bottom-color:#0b0b0b}
+.tab-btn:hover:not(.on){color:#52514e}
+.tab-pane{display:none}.tab-pane.on{display:block}
 </style>
 </head>
 <body>
@@ -48,23 +53,38 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;font-size:11px;padding
   目標: 0-10k <strong>75%</strong>・10-25k <strong>70%</strong>・25-50k <strong>70%</strong>・50-100k <strong>66%</strong>　／　FY27実績ベース<br>
   <span style="color:#e34948">■ 赤 = ギャップ大</span>　<span style="color:#1baf7a">■ 緑 = 目標達成済み</span>　セル内: <strong>追加必要Owned額</strong> ／ 現在Owned率 → 目標率
 </p>
-<div class="summary-bar" id="kpi-row"></div>
-<div class="controls">
-  <span class="ctrl-label">ECS Mgr:</span>
-  <div id="mgr-filter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+<div class="tab-bar">
+  <button class="tab-btn on" data-tab="team">チーム別ビュー</button>
+  <button class="tab-btn" data-tab="mgr">ECS全体ビュー</button>
 </div>
-<div class="controls">
-  <span class="ctrl-label">LVL6:</span>
-  <div id="lvl6-filter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+
+<!-- タブ1: チーム別 -->
+<div class="tab-pane on" id="pane-team">
+  <div class="summary-bar" id="kpi-row"></div>
+  <div class="controls">
+    <span class="ctrl-label">ECS Mgr:</span>
+    <div id="mgr-filter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+  </div>
+  <div class="controls">
+    <span class="ctrl-label">LVL6:</span>
+    <div id="lvl6-filter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+  </div>
+  <div class="sort-row">
+    <span class="ctrl-label">並び順:</span>
+    <button class="sort-btn on" data-sort="gap">総ギャップ降順</button>
+    <button class="sort-btn" data-sort="bco">BCO総額降順</button>
+    <button class="sort-btn" data-sort="rate">Owned率昇順</button>
+    <button class="sort-btn" data-sort="name">チーム名</button>
+  </div>
+  <div class="wrap"><table id="tbl"></table></div>
 </div>
-<div class="sort-row">
-  <span class="ctrl-label">並び順:</span>
-  <button class="sort-btn on" data-sort="gap">総ギャップ降順</button>
-  <button class="sort-btn" data-sort="bco">BCO総額降順</button>
-  <button class="sort-btn" data-sort="rate">Owned率昇順</button>
-  <button class="sort-btn" data-sort="name">チーム名</button>
+
+<!-- タブ2: ECS全体 -->
+<div class="tab-pane" id="pane-mgr">
+  <div class="summary-bar" id="kpi-row-mgr"></div>
+  <div class="wrap"><table id="tbl-mgr"></table></div>
 </div>
-<div class="wrap"><table id="tbl"></table></div>
+
 <div id="tooltip"></div>
 
 <script>
@@ -271,6 +291,129 @@ function render(){
   });
 }
 render();
+
+// --- タブ切り替え ---
+document.querySelector('.tab-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn'); if(!btn) return;
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('on', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('on', p.id==='pane-'+tab));
+  if(tab==='mgr') renderMgrView();
+});
+
+// --- ECS Mgr別集計ビュー ---
+function renderMgrView(){
+  // RAW全件をecs_mgrでgroup by → band別に合算
+  const mgrMap = {};
+  RAW.forEach(d => {
+    const mgr = d.ecs_mgr||'(未割当)';
+    if(!mgrMap[mgr]) mgrMap[mgr] = {ecs_mgr:mgr, total_amt:0, total_owned_amt:0, bands:{}};
+    const m = mgrMap[mgr];
+    m.total_amt += d.total_amt;
+    m.total_owned_amt += d.total_owned_amt;
+    BANDS.forEach(b => {
+      if(!m.bands[b]) m.bands[b]={amt:0,owned_amt:0,n:0,owned_n:0,target:b==='50-100k'?66:b==='0-10k'?75:70};
+      const v = d.bands[b]||{};
+      m.bands[b].amt     += v.amt||0;
+      m.bands[b].owned_amt += v.owned_amt||0;
+      m.bands[b].n       += v.n||0;
+      m.bands[b].owned_n += v.owned_n||0;
+    });
+  });
+  // owned_rate / gap_amt を再計算
+  const mgrList = Object.values(mgrMap).filter(m => ALL_MGRS.includes(m.ecs_mgr));
+  mgrList.forEach(m => {
+    m.overall_owned_rate = m.total_amt>0 ? m.total_owned_amt/m.total_amt*100 : 0;
+    m.total_gap = 0;
+    BANDS.forEach(b => {
+      const v = m.bands[b];
+      v.owned_rate = v.amt>0 ? v.owned_amt/v.amt*100 : 0;
+      v.gap_amt = Math.max(0, v.amt*v.target/100 - v.owned_amt);
+      m.total_gap += v.gap_amt;
+    });
+  });
+  mgrList.sort((a,b)=>b.total_gap-a.total_gap);
+
+  const totalGap   = mgrList.reduce((s,m)=>s+m.total_gap,0);
+  const totalBCO   = mgrList.reduce((s,m)=>s+m.total_amt,0);
+  const totalOwned = mgrList.reduce((s,m)=>s+m.total_owned_amt,0);
+  const overallRate= totalBCO>0?totalOwned/totalBCO*100:0;
+  document.getElementById('kpi-row-mgr').innerHTML=`
+    <div class="kpi"><div class="kpi-lbl">ECS Mgr数</div><div class="kpi-val">${mgrList.length}</div></div>
+    <div class="kpi"><div class="kpi-lbl">総ギャップ（金額）</div><div class="kpi-val red">${fmtK(totalGap)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">BCO総額</div><div class="kpi-val">${fmtK(totalBCO)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">現Owned率（金額）</div><div class="kpi-val">${overallRate.toFixed(1)}%</div></div>`;
+
+  const mgrMaxGap = Math.max(...mgrList.flatMap(m=>BANDS.map(b=>m.bands[b]?.gap_amt||0)));
+  function mgrGapColor(gap, achieved, owned_rate, target){
+    if(achieved) return {bg:'#22c55e',fg:'#fff'};
+    if(gap===0)  return {bg:'#f0f0ee',fg:'#a8a8a0'};
+    const progress = Math.min((owned_rate||0)/(target||70), 1.0);
+    if(progress >= 0.85) return {bg:'#d1fae5',fg:'#065f46'};
+    if(progress >= 0.65) return {bg:'#d9f5e8',fg:'#1a7a50'};
+    if(progress >= 0.5)  return {bg:'#fef9c3',fg:'#854d0e'};
+    const t = Math.pow(gap/mgrMaxGap, 0.45);
+    const r=Math.round(254-t*(254-200)), g=Math.round(242-t*(242-30)), bl=Math.round(240-t*(240-30));
+    return {bg:`rgb(${r},${g},${bl})`, fg:t>0.45?'#fff':'#1a0a00'};
+  }
+
+  const tbl = document.getElementById('tbl-mgr');
+  tbl.innerHTML = `<thead><tr>
+    <th class="left">ECS Mgr</th>
+    <th>BCO総額</th>
+    <th>現Owned率</th>
+    ${BANDS.map(b=>`<th>${b}<br><span style="font-size:10px;font-weight:400;color:#898781">目標 ${b==='50-100k'?66:b==='0-10k'?75:70}%</span></th>`).join('')}
+    <th>総ギャップ</th>
+  </tr></thead>
+  <tbody>${mgrList.map(m => {
+    const hex = MGR_COLOR[m.ecs_mgr]||'#898781';
+    const bandCells = BANDS.map(b => {
+      const v = m.bands[b]||{gap_amt:0,owned_rate:0,amt:0,n:0,owned_n:0,owned_amt:0,target:70};
+      const achieved = v.gap_amt===0 && v.n>0;
+      const noData   = v.n===0;
+      if(noData) return `<td style="padding:3px 4px"><div class="cell" style="background:#f0f0ee;color:#c3c2b7;min-width:80px"><span class="gap" style="font-size:11px">—</span><span class="rate">0件</span></div></td>`;
+      const {bg,fg} = mgrGapColor(v.gap_amt, achieved, v.owned_rate, v.target);
+      return `<td style="padding:3px 4px"><div class="cell" style="background:${bg};color:${fg}" data-mgr="${encodeURIComponent(m.ecs_mgr)}" data-band="${b}">
+        <span class="gap">${achieved?'✓達成':fmtK(v.gap_amt)}</span>
+        <span class="rate">${v.owned_rate.toFixed(0)}%→${v.target}%</span>
+      </div></td>`;
+    }).join('');
+    return `<tr>
+      <td class="name"><span class="dot" style="background:${hex}"></span><strong>${m.ecs_mgr}</strong></td>
+      <td class="num">${fmtK(m.total_amt)}</td>
+      <td class="num" style="font-weight:700;color:${m.overall_owned_rate>=50?'#1baf7a':m.overall_owned_rate>=30?'#eb6834':'#e34948'}">${m.overall_owned_rate.toFixed(1)}%</td>
+      ${bandCells}
+      <td class="total-gap">${m.total_gap>0?fmtK(m.total_gap):'<span style="color:#1baf7a;font-size:11px">✓達成</span>'}</td>
+    </tr>`;
+  }).join('')}</tbody>`;
+
+  // tooltip for mgr view
+  tbl.querySelectorAll('.cell[data-mgr]').forEach(el => {
+    el.addEventListener('mouseenter',()=>{
+      const mgr = decodeURIComponent(el.dataset.mgr);
+      const band = el.dataset.band;
+      const m = mgrList.find(x=>x.ecs_mgr===mgr); if(!m) return;
+      const v = m.bands[band];
+      tt.innerHTML=`<strong style="color:${MGR_COLOR[mgr]||'#0b0b0b'}">${mgr}</strong>
+        <div style="font-size:11px;font-weight:600;margin-top:3px">Deal Band: ${band}</div>
+        <div style="border-top:1px solid #e1e0d9;margin:5px 0"></div>
+        <div class="tt-row"><span class="tt-lbl">BCO（${band}）</span><span class="tt-val">${fmtK(v.amt)}</span></div>
+        <div class="tt-row"><span class="tt-lbl">Owned金額</span><span class="tt-val">${fmtK(v.owned_amt)}</span></div>
+        <div class="tt-row"><span class="tt-lbl">現Owned率</span><span class="tt-val">${v.owned_rate.toFixed(1)}%</span></div>
+        <div class="tt-row"><span class="tt-lbl">目標Owned率</span><span class="tt-val">${v.target}%</span></div>
+        <div style="border-top:1px solid #e1e0d9;margin:5px 0"></div>
+        <div class="tt-row"><span class="tt-lbl" style="color:#e34948;font-weight:700">追加必要額</span><span class="tt-val" style="color:#e34948">${fmtK(v.gap_amt)}</span></div>
+        <div class="tt-row"><span class="tt-lbl">件数</span><span class="tt-val">${v.owned_n} / ${v.n}件</span></div>`;
+      tt.classList.add('show');
+    });
+    el.addEventListener('mousemove',e=>{
+      const x=e.clientX+14,y=e.clientY-10;
+      tt.style.left=(x+264>window.innerWidth?e.clientX-278:x)+'px';
+      tt.style.top=y+'px';
+    });
+    el.addEventListener('mouseleave',()=>tt.classList.remove('show'));
+  });
+}
 </script>
 </body>
 </html>
