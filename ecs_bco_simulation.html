@@ -377,52 +377,6 @@ function renderTotal(content) {
   });
   html += '</div>';
 
-  // FLM breakdown table
-  html += `<div class="breakdown"><h2>FLM別 Landing 内訳</h2>
-    <table class="bk"><thead><tr>
-      <th>FLM</th>`;
-  MONTHS.forEach(m => html += `<th colspan="3">${m}</th>`);
-  html += `<th colspan="3">FY27 Q4</th></tr>
-    <tr><th></th>`;
-  MONTHS.forEach(() => html += `<th>Pred</th><th>Landing</th><th>Gap</th>`);
-  html += `<th>Pred</th><th>Landing</th><th>Gap</th></tr></thead><tbody>`;
-
-  FLM_KEYS.forEach(k => {
-    const flm = FLM[k];
-    html += `<tr><td>${flm.label}</td>`;
-    let fyPred=0, fyLand=0;
-    MONTHS.forEach(m => {
-      const l  = calcFLMLanding(k, m);
-      const pd = flm.pred[m];
-      const g  = l.total - pd.total;
-      fyPred += pd.total; fyLand += l.total;
-      html += `<td class="pred">${fmt(pd.total)}</td>
-               <td class="land">${fmt(l.total)}</td>
-               <td class="${g>=0?'tpos':'tneg'}">${g>=0?'+':''}${fmt(g)}</td>`;
-    });
-    const fyG = fyLand - fyPred;
-    html += `<td class="pred">${fmt(fyPred)}</td>
-             <td class="land">${fmt(fyLand)}</td>
-             <td class="${fyG>=0?'tpos':'tneg'}">${fyG>=0?'+':''}${fmt(fyG)}</td></tr>`;
-  });
-
-  // Subtotal row
-  html += `<tr class="grand"><td>Total</td>`;
-  let fyTPred=0, fyTLand=0;
-  MONTHS.forEach(m => {
-    const l  = calcTotalLanding(m);
-    const pd = totalPred(m);
-    const g  = l.total - pd.total;
-    fyTPred += pd.total; fyTLand += l.total;
-    html += `<td class="pred">${fmt(pd.total)}</td>
-             <td class="land">${fmt(l.total)}</td>
-             <td class="${g>=0?'tpos':'tneg'}">${g>=0?'+':''}${fmt(g)}</td>`;
-  });
-  const fyTG = fyTLand - fyTPred;
-  html += `<td class="pred">${fmt(fyTPred)}</td>
-           <td class="land">${fmt(fyTLand)}</td>
-           <td class="${fyTG>=0?'tpos':'tneg'}">${fyTG>=0?'+':''}${fmt(fyTG)}</td>
-           </tr></tbody></table></div>`;
 
   content.innerHTML = html;
 }
