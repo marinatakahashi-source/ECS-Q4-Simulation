@@ -125,6 +125,17 @@
   .hl   { font-weight: 800; color: #0e7490; background: #cffafe !important; }
   .cpos { color: #059669; font-weight: 700; }
   .cneg { color: #94a3b8; font-weight: 500; }
+
+  /* ── FLM Gap list in Total card ── */
+  .flm-gap-section { margin-top: 8px; border-top: 1px dashed #e2e8f0; padding-top: 6px; }
+  .flm-gap-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
+    letter-spacing: .5px; margin-bottom: 4px; }
+  .flm-gap-row { display: flex; justify-content: space-between; align-items: center;
+    padding: 2px 0; font-size: 11px; }
+  .flm-gap-name { color: #64748b; font-weight: 500; }
+  .flm-gap-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .flm-gap-val.pos { color: #059669; }
+  .flm-gap-val.neg { color: #dc2626; }
 </style>
 </head>
 <body>
@@ -347,7 +358,11 @@ function renderTotal(content) {
     const l  = calcTotalLanding(m);
     const pd = totalPred(m);
     const att = (l.total/pd.total*100).toFixed(1);
-    html += monthCardHtml(m, pd, l, att, null);
+    const flmGaps = FLM_KEYS.map(k => ({
+      name: FLM[k].label,
+      gap:  calcFLMLanding(k, m).total - FLM[k].pred[m].total,
+    }));
+    html += monthCardHtml(m, pd, l, att, null, flmGaps);
   });
   html += '</div>';
 
@@ -449,7 +464,7 @@ function kpiHtml(q4Land, q4Pred, label) {
   </div>`;
 }
 
-function monthCardHtml(m, pd, l, att, params) {
+function monthCardHtml(m, pd, l, att, params, flmGaps) {
   const rowHtml = (label, pv, lv, cls='') => {
     const g = lv - pv;
     return `<div class="row ${cls}">
@@ -473,6 +488,21 @@ function monthCardHtml(m, pd, l, att, params) {
       </div>`;
   }
 
+  let flmSection = '';
+  if (flmGaps) {
+    const rows = flmGaps.map(({name, gap}) => {
+      const sign = gap >= 0 ? '+' : '';
+      return `<div class="flm-gap-row">
+        <span class="flm-gap-name">${name}</span>
+        <span class="flm-gap-val ${gap>=0?'pos':'neg'}">${sign}${fmt(gap)}</span>
+      </div>`;
+    }).join('');
+    flmSection = `<div class="flm-gap-section">
+      <div class="flm-gap-title">FLM GAP</div>
+      ${rows}
+    </div>`;
+  }
+
   return `<div class="card">
     <div class="card-header">${m}<span class="attain">${att}% attain</span></div>
     <div class="card-body">
@@ -485,6 +515,7 @@ function monthCardHtml(m, pd, l, att, params) {
       ${subRows}
       ${rowHtml('Other（Closed）', pd.other, l.other)}
       ${rowHtml('Commit Total', pd.total, l.total, 'total')}
+      ${flmSection}
     </div>
   </div>`;
 }
