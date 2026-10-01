@@ -20,7 +20,7 @@ h1{font-size:17px;font-weight:700;margin-bottom:4px}
 .mosaic-wrap{background:#fcfcfb;border:1px solid rgba(11,11,11,.1);border-radius:8px;padding:20px;overflow-x:auto}
 .mosaic-container{position:relative;min-width:700px}
 .x-labels{display:flex;margin-bottom:6px}
-.x-label{text-align:center;font-size:11px;font-weight:600;color:#52514e;padding:0 2px}
+.x-label{text-align:center;font-size:11px;font-weight:600;color:#52514e;padding:0 2px;line-height:1.5}
 .mosaic-inner{display:flex;gap:3px}
 .band-col{display:flex;flex-direction:column;gap:3px;position:relative}
 .mosaic-cell{position:relative;cursor:pointer;border-radius:4px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 4px;transition:opacity .12s;min-height:24px}
@@ -208,8 +208,6 @@ function renderMosaic(containerId, rows, paneKey){
   inner.className = 'mosaic-inner';
   inner.style.height = TOTAL_H + 'px';
 
-  const bandSubRow = document.createElement('div');
-  bandSubRow.className = 'band-label-area';
 
   BANDS.forEach(b => {
     const bTotal = bandTotals[b];
@@ -218,7 +216,7 @@ function renderMosaic(containerId, rows, paneKey){
     const xl = document.createElement('div');
     xl.className = 'x-label';
     xl.style.flex = `${flexW} 0 0`;
-    xl.innerHTML = `<strong>${b}</strong>`;
+    xl.innerHTML = `<strong>${b}</strong><br><span style="font-size:10px;font-weight:400;color:#52514e">${fmtK(bTotal)}</span><br><span style="font-size:10px;font-weight:400;color:#898781">${flexW.toFixed(0)}%</span>`;
     xLabels.appendChild(xl);
 
     const col = document.createElement('div');
@@ -268,19 +266,10 @@ function renderMosaic(containerId, rows, paneKey){
 
     inner.appendChild(col);
 
-    const bs = document.createElement('div');
-    bs.className = 'band-sub';
-    bs.style.flex = `${flexW} 0 0`;
-    bs.innerHTML = `${fmtK(bTotal)}<br><span style="font-size:9px">${(flexW).toFixed(0)}%</span>`;
-    bandSubRow.appendChild(bs);
   });
 
   container.appendChild(xLabels);
   container.appendChild(inner);
-  const bw = document.createElement('div');
-  bw.style.cssText = 'display:flex;margin-top:6px;';
-  bw.appendChild(bandSubRow);
-  container.appendChild(bw);
 
   const tt = document.getElementById('tooltip');
   container.querySelectorAll('.mosaic-cell[data-band]').forEach(el => {
