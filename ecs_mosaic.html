@@ -66,10 +66,18 @@ h1{font-size:17px;font-weight:700;margin-bottom:4px}
 </div>
 
 <div class="tab-pane" id="pane-team">
-  <div class="view-toggle">
-    <span style="font-size:11px;color:#898781">縦軸:</span>
-    <button class="vbtn on" data-mode="prop" data-pane="team">BCO金額比率</button>
-    <button class="vbtn" data-mode="equal" data-pane="team">均等</button>
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+    <div class="view-toggle" style="margin-bottom:0">
+      <span style="font-size:11px;color:#898781">縦軸:</span>
+      <button class="vbtn on" data-mode="prop" data-pane="team">BCO金額比率</button>
+      <button class="vbtn" data-mode="equal" data-pane="team">均等</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:11px;color:#898781">ECS Mgr:</span>
+      <select id="team-mgr-filter" style="font-size:12px;padding:4px 8px;border:1px solid #c3c2b7;border-radius:6px;background:#fcfcfb;color:#0b0b0b;font-family:inherit;cursor:pointer">
+        <option value="ALL">全員表示</option>
+      </select>
+    </div>
   </div>
   <div class="mosaic-wrap">
     <div class="mosaic-container" id="mosaic-team"></div>
@@ -304,6 +312,20 @@ function renderMosaic(containerId, rows, paneKey){
   });
 }
 
+// セレクトボックスにMgrオプションを追加
+const mgrSelect = document.getElementById('team-mgr-filter');
+ALL_MGRS.forEach(m => {
+  const opt = document.createElement('option');
+  opt.value = m;
+  opt.textContent = m;
+  mgrSelect.appendChild(opt);
+});
+
+function getFilteredTeamData(){
+  const val = mgrSelect.value;
+  return val === 'ALL' ? TEAM_DATA : TEAM_DATA.filter(r => r.ecs_mgr === val);
+}
+
 renderMosaic('mosaic-mgr', MGR_DATA, 'mgr');
 
 document.querySelector('.tab-bar').addEventListener('click', e => {
@@ -311,9 +333,13 @@ document.querySelector('.tab-bar').addEventListener('click', e => {
   const tab = btn.dataset.tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('on', b.dataset.tab===tab));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('on', p.id==='pane-'+tab));
-  if(tab==='team' && !document.getElementById('mosaic-team').hasChildNodes()){
-    renderMosaic('mosaic-team', TEAM_DATA, 'team');
+  if(tab==='team'){
+    renderMosaic('mosaic-team', getFilteredTeamData(), 'team');
   }
+});
+
+mgrSelect.addEventListener('change', () => {
+  renderMosaic('mosaic-team', getFilteredTeamData(), 'team');
 });
 
 document.querySelectorAll('.vbtn').forEach(btn => {
