@@ -5,72 +5,79 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ECS Q4 BCO Simulation</title>
 <style>
-  /* ── カラーパレット（ブルー・グリーン・グレー系） ──
-     primary:   #0e7490  (teal-700)
-     primary-lt:#cffafe  (cyan-100)
-     accent:    #0d9488  (teal-600)
-     green:     #059669  (emerald-600)
-     red:       #dc2626
-     bg:        #f0f4f7
-     card:      #ffffff
-     border:    #e2e8f0
-  */
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #eef4f7; color: #1e293b; padding: 24px; }
+  body { font-family: 'Segoe UI', sans-serif; background: #eef4f7; color: #1e293b; }
   h1 { font-size: 20px; font-weight: 700; color: #0e7490; margin-bottom: 4px; }
-  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 0; }
 
-  /* ── Controls ── */
-  .controls { background: #fff; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(14,116,144,.1); border-left: 4px solid #0e7490; }
-  .controls h2 { font-size: 14px; font-weight: 600; color: #0e7490; margin-bottom: 16px; letter-spacing: .5px; text-transform: uppercase; }
-  .control-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-  .control-group { display: flex; flex-direction: column; gap: 6px; }
-  .control-group label { font-size: 12px; font-weight: 600; color: #475569; }
-  .control-row { display: flex; align-items: center; gap: 8px; }
-  .control-row input[type=number] {
-    width: 90px; padding: 5px 8px; border: 1.5px solid #cbd5e1; border-radius: 6px;
-    font-size: 13px; font-weight: 600; color: #0e7490; text-align: right;
+  /* ── Tab bar ── */
+  .tab-bar { display: flex; gap: 4px; padding: 16px 16px 0; flex-wrap: wrap; }
+  .tab-btn { padding: 8px 16px; border-radius: 8px 8px 0 0; border: 1px solid #e2e8f0;
+    border-bottom: none; background: #e2e8f0; font-size: 13px; font-weight: 600;
+    cursor: pointer; color: #64748b; transition: all .15s; }
+  .tab-btn.active { background: #fff; color: #0e7490; border-color: #cbd5e1; }
+  .tab-btn:hover:not(.active) { background: #f0fdfa; color: #0d9488; }
+
+  /* ── Page layout ── */
+  .page-wrap { display: flex; min-height: calc(100vh - 90px); }
+
+  /* ── Sidebar ── */
+  .sidebar { width: 200px; min-width: 200px; background: #fff; border-right: 1px solid #e2e8f0;
+    padding: 16px 14px; display: flex; flex-direction: column; gap: 8px;
+    box-shadow: 2px 0 8px rgba(14,116,144,.06); }
+  .sidebar.hidden { display: none; }
+  .sidebar h2 { font-size: 12px; font-weight: 700; color: #0e7490;
+    letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
+  .sec-div { border-top: 1px solid #e2e8f0; padding-top: 6px; margin-top: 2px;
+    font-size: 10px; font-weight: 700; color: #94a3b8; letter-spacing: .8px; text-transform: uppercase; }
+  .cg { display: flex; flex-direction: column; gap: 3px; }
+  .cg label { font-size: 10px; font-weight: 600; color: #64748b; }
+  .cr { display: flex; align-items: center; gap: 5px; }
+  .cr input[type=number] {
+    width: 72px; padding: 4px 6px; border: 1.5px solid #cbd5e1; border-radius: 5px;
+    font-size: 12px; font-weight: 600; color: #0e7490; text-align: right;
     background: #f8fafc; outline: none; transition: border-color .15s;
   }
-  .control-row input[type=number]:focus { border-color: #0e7490; background: #fff; }
-  .input-unit { font-size: 12px; color: #94a3b8; font-weight: 500; }
-  .section-divider { grid-column: 1/-1; border-top: 1px solid #e2e8f0; padding-top: 8px;
-    font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: .8px; text-transform: uppercase; }
-  .preset-row { grid-column: 1/-1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .preset-row span { font-size: 12px; color: #64748b; }
-  .btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff;
-    font-size: 12px; font-weight: 600; cursor: pointer; color: #334155; transition: all .15s; }
+  .cr input[type=number]:focus { border-color: #0e7490; background: #fff; }
+  .unit { font-size: 10px; color: #94a3b8; }
+  .preset-wrap { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+  .preset-wrap span { font-size: 10px; color: #64748b; font-weight: 600; }
+  .btn { padding: 5px 8px; border-radius: 5px; border: 1px solid #cbd5e1; background: #fff;
+    font-size: 11px; font-weight: 600; cursor: pointer; color: #334155;
+    transition: all .15s; width: 100%; text-align: left; }
   .btn:hover { background: #f0fdfa; border-color: #0d9488; color: #0d9488; }
 
-  /* ── Summary KPIs ── */
-  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-  .kpi { background: #fff; border-radius: 12px; padding: 16px 20px;
-    box-shadow: 0 2px 8px rgba(14,116,144,.1); border-top: 4px solid #0e7490; }
+  /* ── Content ── */
+  .content { flex: 1; padding: 16px; overflow-x: auto; }
+
+  /* ── KPIs ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: #fff; border-radius: 10px; padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(14,116,144,.08); border-top: 4px solid #0e7490; }
   .kpi.green { border-top-color: #059669; }
   .kpi.red   { border-top-color: #dc2626; }
-  .kpi.amber { border-top-color: #0891b2; }
-  .kpi-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
-  .kpi-val   { font-size: 26px; font-weight: 800; margin: 4px 0 2px; color: #1e293b; }
-  .kpi-sub   { font-size: 12px; color: #94a3b8; }
+  .kpi-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+  .kpi-val   { font-size: 24px; font-weight: 800; margin: 4px 0 2px; color: #1e293b; }
+  .kpi-sub   { font-size: 11px; color: #94a3b8; }
+  .bar-wrap  { background: #e2e8f0; border-radius: 4px; height: 5px; overflow: hidden; margin-top: 6px; }
+  .bar-fill  { height: 100%; border-radius: 4px; transition: width .3s; }
 
   /* ── Month cards ── */
-  .month-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
-  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(14,116,144,.1); overflow: hidden; }
-  .card-header { padding: 14px 20px; font-size: 15px; font-weight: 700;
-    background: linear-gradient(135deg, #0e7490 0%, #0d9488 100%); color: #fff;
+  .month-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 16px; }
+  .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(14,116,144,.08); overflow: hidden; }
+  .card-header { padding: 12px 16px; font-size: 14px; font-weight: 700;
+    background: linear-gradient(135deg,#0e7490 0%,#0d9488 100%); color: #fff;
     display: flex; justify-content: space-between; align-items: center; }
-  .card-header .attain { font-size: 12px; font-weight: 600; background: rgba(255,255,255,.2);
-    padding: 2px 10px; border-radius: 20px; }
-  .card-body { padding: 16px 20px; }
-
-  /* row inside card */
-  .row { display: grid; grid-template-columns: 110px 1fr 1fr 80px; gap: 6px;
-    align-items: center; padding: 5px 0; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+  .card-header .attain { font-size: 11px; font-weight: 600; background: rgba(255,255,255,.2);
+    padding: 2px 8px; border-radius: 20px; }
+  .card-body { padding: 12px 16px; }
+  .row { display: grid; grid-template-columns: 105px 1fr 1fr 72px; gap: 4px;
+    align-items: center; padding: 4px 0; font-size: 12px; border-bottom: 1px solid #f1f5f9; }
   .row:last-child { border-bottom: none; }
-  .row.header { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
-    letter-spacing: .4px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-  .row.total { font-weight: 700; border-top: 2px solid #e2e8f0; margin-top: 4px; padding-top: 8px; border-bottom: none; }
+  .row.hdr { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
+    letter-spacing: .4px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
+  .row.total { font-weight: 700; border-top: 2px solid #e2e8f0; margin-top: 4px;
+    padding-top: 6px; border-bottom: none; }
   .lbl { color: #334155; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .pred { color: #0e7490; }
@@ -78,410 +85,512 @@
   .gap  { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
   .gap.pos { color: #059669; }
   .gap.neg { color: #dc2626; }
+  .sub-row { font-size: 10px; color: #94a3b8; padding: 1px 0 3px 8px;
+    display: flex; justify-content: space-between; }
+  .need-pipe { font-size: 10px; padding: 1px 0 3px 8px;
+    display: flex; justify-content: space-between; color: #b45309; }
 
-  /* progress bar */
-  .bar-wrap { background: #e2e8f0; border-radius: 4px; height: 6px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+  /* ── Total breakdown table ── */
+  .breakdown { background: #fff; border-radius: 10px; padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(14,116,144,.08); margin-bottom: 16px;
+    border-left: 4px solid #0e7490; overflow-x: auto; }
+  .breakdown h2 { font-size: 12px; font-weight: 700; color: #0e7490;
+    letter-spacing: .5px; text-transform: uppercase; margin-bottom: 12px; }
+  table.bk { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+  table.bk th { background: #f0fdfa; padding: 6px 10px; text-align: right; font-weight: 700;
+    font-size: 10px; color: #0e7490; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
+  table.bk th:first-child { text-align: left; }
+  table.bk td { padding: 5px 10px; text-align: right; border-bottom: 1px solid #f1f5f9;
+    font-variant-numeric: tabular-nums; }
+  table.bk td:first-child { text-align: left; font-weight: 600; color: #334155; }
+  table.bk tr.subtotal td { font-weight: 700; background: #f8fafc; }
+  table.bk tr.grand td { font-weight: 800; background: #f0fdfa; border-top: 2px solid #0e7490; }
+  .tpos { color: #059669; font-weight: 700; }
+  .tneg { color: #dc2626; font-weight: 700; }
 
-  /* sensitivity table */
-  .sens-section { background: #fff; border-radius: 12px; padding: 20px 24px;
-    box-shadow: 0 2px 8px rgba(14,116,144,.1); margin-bottom: 24px;
-    border-left: 4px solid #0d9488; }
-  .sens-section h2 { font-size: 14px; font-weight: 600; color: #0d9488; margin-bottom: 16px;
+  /* ── Sensitivity ── */
+  .sens-section { background: #fff; border-radius: 10px; padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(14,116,144,.08); margin-bottom: 16px;
+    border-left: 4px solid #0d9488; overflow-x: auto; }
+  .sens-section h2 { font-size: 12px; font-weight: 700; color: #0d9488; margin-bottom: 8px;
     letter-spacing: .5px; text-transform: uppercase; }
-  table.sens { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table.sens th { background: #f0fdfa; padding: 8px 12px; text-align: right; font-weight: 700;
-    font-size: 11px; color: #0e7490; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
+  table.sens { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+  table.sens th { background: #f0fdfa; padding: 6px 10px; text-align: right; font-weight: 700;
+    font-size: 10px; color: #0e7490; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
   table.sens th:first-child { text-align: left; }
-  table.sens td { padding: 7px 12px; text-align: right; border-bottom: 1px solid #f1f5f9;
+  table.sens td { padding: 5px 10px; text-align: right; border-bottom: 1px solid #f1f5f9;
     font-variant-numeric: tabular-nums; }
   table.sens td:first-child { text-align: left; font-weight: 600; color: #334155; }
   table.sens tr:hover td { background: #f0fdfa; }
-  .highlight-cell { font-weight: 800; color: #0e7490; background: #cffafe !important; }
-  .cell-pos { color: #059669; font-weight: 700; }
-  .cell-neg { color: #94a3b8; font-weight: 500; }
+  .hl   { font-weight: 800; color: #0e7490; background: #cffafe !important; }
+  .cpos { color: #059669; font-weight: 700; }
+  .cneg { color: #94a3b8; font-weight: 500; }
 </style>
 </head>
 <body>
 
-<h1>ECS Q4 BCO Simulation</h1>
-<p class="subtitle">FY27 Q4（Nov / Dec / Jan）― パラメータを調整してLanding予測をシミュレーション</p>
+<div style="padding:16px 16px 0;background:#eef4f7">
+  <h1>ECS Q4 BCO Simulation</h1>
+  <p class="subtitle">FY27 Q4（Nov / Dec / Jan）― FLM別パラメータの積み上げでTotal Landingを算出</p>
+</div>
 
-<!-- ── CONTROLS ── -->
-<div class="controls">
-  <h2>パラメータ設定</h2>
-  <div class="control-grid">
+<div class="tab-bar" id="tabBar">
+  <button class="tab-btn active" onclick="switchTab('total')">Total</button>
+  <button class="tab-btn" onclick="switchTab('nitta')">Yukari Nitta</button>
+  <button class="tab-btn" onclick="switchTab('hatanaka')">Yuta Hatanaka</button>
+  <button class="tab-btn" onclick="switchTab('kamiya')">Masahiro Kamiya</button>
+  <button class="tab-btn" onclick="switchTab('hagino')">Tomoya Hagino</button>
+  <button class="tab-btn" onclick="switchTab('yamamoto')">Yoshiaki Yamamoto</button>
+  <button class="tab-btn" onclick="switchTab('kobayashi')">Takayuki Kobayashi</button>
+</div>
 
-    <div class="section-divider">November</div>
+<div class="page-wrap">
+  <!-- Sidebar (hidden on Total) -->
+  <div class="sidebar" id="sidebar">
+    <h2 id="sidebarName">パラメータ</h2>
+    <div class="sec-div">November</div>
+    <div class="cg"><label>Erosion率（9/30→11/1）</label>
+      <div class="cr"><input type="number" id="novErosion" min="0" max="100" step="1" value="80"><span class="unit">%</span></div></div>
+    <div class="cg"><label>Conversion Rate</label>
+      <div class="cr"><input type="number" id="novCV" min="0" max="100" step="1" value="40"><span class="unit">%</span></div></div>
+    <div class="cg"><label>CC in Month</label>
+      <div class="cr"><input type="number" id="novCC" min="0" step="1" value="0"><span class="unit">$K</span></div></div>
+    <div class="cg"><label>Open Pipe（11月向け）</label>
+      <div class="cr"><input type="number" id="novPipe" min="0" step="1" value="0"><span class="unit">$K</span></div></div>
 
-    <div class="control-group">
-      <label>NOV Erosion率（9/30→11/1 昨年変化率）</label>
-      <div class="control-row">
-        <input type="number" id="novErosion" min="0" max="100" step="1" value="80">
-        <span class="input-unit">%</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>NOV Conversion Rate（月内CV%）</label>
-      <div class="control-row">
-        <input type="number" id="novCV" min="0" max="100" step="1" value="40">
-        <span class="input-unit">%</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>NOV CC in Month</label>
-      <div class="control-row">
-        <input type="number" id="novCC" min="0" step="1" value="1702">
-        <span class="input-unit">$K</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>NOV Open Pipe（現在の11月向け）</label>
-      <div class="control-row">
-        <input type="number" id="novPipe" min="0" step="1" value="6700">
-        <span class="input-unit">$K</span>
-      </div>
-    </div>
+    <div class="sec-div">December</div>
+    <div class="cg"><label>Erosion率</label>
+      <div class="cr"><input type="number" id="decErosion" min="0" max="100" step="1" value="55"><span class="unit">%</span></div></div>
+    <div class="cg"><label>Conversion Rate</label>
+      <div class="cr"><input type="number" id="decCV" min="0" max="100" step="1" value="40"><span class="unit">%</span></div></div>
+    <div class="cg"><label>CC in Month</label>
+      <div class="cr"><input type="number" id="decCC" min="0" step="1" value="0"><span class="unit">$K</span></div></div>
+    <div class="cg"><label>Open Pipe（12月向け）</label>
+      <div class="cr"><input type="number" id="decPipe" min="0" step="1" value="0"><span class="unit">$K</span></div></div>
 
-    <div class="section-divider">December</div>
+    <div class="sec-div">January</div>
+    <div class="cg"><label>Erosion率</label>
+      <div class="cr"><input type="number" id="janErosion" min="0" max="100" step="1" value="72"><span class="unit">%</span></div></div>
+    <div class="cg"><label>Conversion Rate</label>
+      <div class="cr"><input type="number" id="janCV" min="0" max="100" step="1" value="40"><span class="unit">%</span></div></div>
+    <div class="cg"><label>CC in Month</label>
+      <div class="cr"><input type="number" id="janCC" min="0" step="1" value="0"><span class="unit">$K</span></div></div>
+    <div class="cg"><label>Open Pipe（1月向け）</label>
+      <div class="cr"><input type="number" id="janPipe" min="0" step="1" value="0"><span class="unit">$K</span></div></div>
 
-    <div class="control-group">
-      <label>DEC Erosion率</label>
-      <div class="control-row">
-        <input type="number" id="decErosion" min="0" max="100" step="1" value="55">
-        <span class="input-unit">%</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>DEC Conversion Rate（月内CV%）</label>
-      <div class="control-row">
-        <input type="number" id="decCV" min="0" max="100" step="1" value="40">
-        <span class="input-unit">%</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>DEC CC in Month</label>
-      <div class="control-row">
-        <input type="number" id="decCC" min="0" step="1" value="1949">
-        <span class="input-unit">$K</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>DEC Open Pipe（現在の12月向け）</label>
-      <div class="control-row">
-        <input type="number" id="decPipe" min="0" step="1" value="19317">
-        <span class="input-unit">$K</span>
-      </div>
-    </div>
-
-    <div class="section-divider">January</div>
-
-    <div class="control-group">
-      <label>JAN Erosion率</label>
-      <div class="control-row">
-        <input type="number" id="janErosion" min="0" max="100" step="1" value="72">
-        <span class="input-unit">%</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>JAN Conversion Rate（月内CV%）</label>
-      <div class="control-row">
-        <input type="number" id="janCV" min="0" max="100" step="1" value="40">
-        <span class="input-unit">%</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>JAN CC in Month</label>
-      <div class="control-row">
-        <input type="number" id="janCC" min="0" step="1" value="3252">
-        <span class="input-unit">$K</span>
-      </div>
-    </div>
-    <div class="control-group">
-      <label>JAN Open Pipe（現在の1月向け）</label>
-      <div class="control-row">
-        <input type="number" id="janPipe" min="0" step="1" value="25938">
-        <span class="input-unit">$K</span>
-      </div>
-    </div>
-
-    <div class="preset-row">
-      <span>プリセット：</span>
+    <div class="preset-wrap">
+      <span>プリセット</span>
       <button class="btn" onclick="applyPreset('current')">現状ベース</button>
-      <button class="btn" onclick="applyPreset('upside')">Upside（CV+5%, CC+20%）</button>
-      <button class="btn" onclick="applyPreset('stretch')">Stretch（CV+10%, CC+30%）</button>
-      <button class="btn" onclick="applyPreset('downside')">Downside（Erosion-10%）</button>
+      <button class="btn" onclick="applyPreset('upside')">Upside (CV+5%,CC+20%)</button>
+      <button class="btn" onclick="applyPreset('stretch')">Stretch (CV+10%,CC+30%)</button>
+      <button class="btn" onclick="applyPreset('downside')">Downside (Erosion-10%)</button>
     </div>
   </div>
-</div>
 
-<!-- ── KPIs ── -->
-<div class="kpi-row" id="kpiRow"></div>
-
-<!-- ── MONTH CARDS ── -->
-<div class="month-grid" id="monthGrid"></div>
-
-<!-- ── SENSITIVITY TABLE ── -->
-<div class="sens-section">
-  <h2>感応度分析 — Open Pipe × Conversion Rate（November）</h2>
-  <p style="font-size:12px;color:#888;margin-bottom:12px;">各セルはOp to ACV（$K）= Day1 Pipe × CV%。Pred Op to ACV = $2,385K が目安。</p>
-  <div id="sensTable"></div>
-</div>
-
-<div class="sens-section">
-  <h2>感応度分析 — CC in Month：平均単価 × 件数（November）</h2>
-  <p style="font-size:12px;color:#888;margin-bottom:12px;">各セルはCC in Month合計（$K）。現在設定のCC合計に近いセルが太字。Pred CC = $1,898K が目安。</p>
-  <div id="sensTable2"></div>
+  <div class="content" id="mainContent"></div>
 </div>
 
 <script>
-// ── Static data (Pred / Other from image) ──────────────────────────────
-const MONTHS = ['November', 'December', 'January'];
+const MONTHS = ['November','December','January'];
 
-const PRED = {
-  November: { total: 4914, cc: 1898, opAcv: 2385, other: 632 },
-  December: { total: 7321, cc: 2717, opAcv: 4217, other: 387 },
-  January:  { total: 14565, cc: 4780, opAcv: 8507, other: 1298 },
+// FLM static data (pred, other=Closed actual, default pipe & cc for sidebar)
+const FLM = {
+  nitta: {
+    label: 'Yukari Nitta',
+    pred:  { November:{total:915,cc:390,opAcv:434,other:91},   December:{total:1331,cc:421,opAcv:889,other:22},   January:{total:2213,cc:737,opAcv:1249,other:227} },
+    other: { November:20,  December:0,   January:0   },
+    defPipe:{ November:1129, December:3190, January:4296 },
+    defCC:  { November:338,  December:341,  January:432  },
+    defErosion:{ November:80, December:55, January:72 },
+    defCV:     { November:40, December:40, January:40 },
+  },
+  hatanaka: {
+    label: 'Yuta Hatanaka',
+    pred:  { November:{total:1108,cc:397,opAcv:597,other:114}, December:{total:1612,cc:640,opAcv:916,other:56},   January:{total:2681,cc:824,opAcv:1637,other:220} },
+    other: { November:42,  December:1,   January:101 },
+    defPipe:{ November:860,  December:2640, January:4670 },
+    defCC:  { November:370,  December:312,  January:711  },
+    defErosion:{ November:80, December:55, January:72 },
+    defCV:     { November:40, December:40, January:40 },
+  },
+  kamiya: {
+    label: 'Masahiro Kamiya',
+    pred:  { November:{total:782,cc:388,opAcv:322,other:72},   December:{total:1138,cc:507,opAcv:586,other:44},   January:{total:1892,cc:714,opAcv:997,other:180} },
+    other: { November:0,   December:96,  January:0   },
+    defPipe:{ November:902,  December:3271, January:3384 },
+    defCC:  { November:265,  December:307,  January:454  },
+    defErosion:{ November:80, December:55, January:72 },
+    defCV:     { November:43, December:46, January:51 },
+  },
+  hagino: {
+    label: 'Tomoya Hagino',
+    pred:  { November:{total:593,cc:268,opAcv:294,other:27},   December:{total:862,cc:403,opAcv:420,other:39},    January:{total:1433,cc:394,opAcv:952,other:87} },
+    other: { November:15,  December:72,  January:0   },
+    defPipe:{ November:0,    December:0,    January:0    },
+    defCC:  { November:172,  December:238,  January:398  },
+    defErosion:{ November:80, December:55, January:72 },
+    defCV:     { November:40, December:40, January:40 },
+  },
+  yamamoto: {
+    label: 'Yoshiaki Yamamoto',
+    pred:  { November:{total:1278,cc:380,opAcv:594,other:303}, December:{total:1859,cc:590,opAcv:1056,other:212}, January:{total:3090,cc:923,opAcv:1903,other:263} },
+    other: { November:182, December:34,  January:113 },
+    defPipe:{ November:1550, December:4735, January:7862 },
+    defCC:  { November:344,  December:445,  January:782  },
+    defErosion:{ November:80, December:55, January:72 },
+    defCV:     { November:44, December:45, January:31 },
+  },
+  kobayashi: {
+    label: 'Takayuki Kobayashi',
+    pred:  { November:{total:824,cc:297,opAcv:423,other:103},  December:{total:1198,cc:415,opAcv:729,other:55},   January:{total:1992,cc:704,opAcv:1092,other:196} },
+    other: { November:44,  December:120, January:86  },
+    defPipe:{ November:989,  December:3223, January:4878 },
+    defCC:  { November:212,  December:306,  January:477  },
+    defErosion:{ November:80, December:55, January:72 },
+    defCV:     { November:28, December:36, January:34 },
+  },
 };
 
-// Other = Closed実績（固定）
-const OTHER_ACTUAL = { November: 260, December: 259, January: 279 };
+const FLM_KEYS = ['nitta','hatanaka','kamiya','hagino','yamamoto','kobayashi'];
 
-// ── Helpers ────────────────────────────────────────────────────────────
-const fmt  = v => '$' + Math.round(v).toLocaleString() + 'K';
-const fmtP = v => v.toFixed(1) + '%';
-const pct  = (v, t) => t ? (v / t * 100).toFixed(1) + '%' : '—';
-
-function getParams() {
-  return {
-    November: {
-      erosion: +document.getElementById('novErosion').value / 100,
-      cv:      +document.getElementById('novCV').value / 100,
-      cc:      +document.getElementById('novCC').value,
-      pipe:    +document.getElementById('novPipe').value,
-    },
-    December: {
-      erosion: +document.getElementById('decErosion').value / 100,
-      cv:      +document.getElementById('decCV').value / 100,
-      cc:      +document.getElementById('decCC').value,
-      pipe:    +document.getElementById('decPipe').value,
-    },
-    January: {
-      erosion: +document.getElementById('janErosion').value / 100,
-      cv:      +document.getElementById('janCV').value / 100,
-      cc:      +document.getElementById('janCC').value,
-      pipe:    +document.getElementById('janPipe').value,
-    },
+// Per-FLM parameter state (initialized from defaults)
+const STATE = {};
+FLM_KEYS.forEach(k => {
+  STATE[k] = {
+    November: { erosion: FLM[k].defErosion.November, cv: FLM[k].defCV.November,
+                cc: FLM[k].defCC.November, pipe: FLM[k].defPipe.November },
+    December: { erosion: FLM[k].defErosion.December, cv: FLM[k].defCV.December,
+                cc: FLM[k].defCC.December, pipe: FLM[k].defPipe.December },
+    January:  { erosion: FLM[k].defErosion.January,  cv: FLM[k].defCV.January,
+                cc: FLM[k].defCC.January,  pipe: FLM[k].defPipe.January  },
   };
+});
+
+let currentTab = 'total';
+
+// ── Helpers ───────────────────────────────────────────────────────────
+const fmt  = v => '$' + Math.round(v).toLocaleString() + 'K';
+const fmtP = v => (+v).toFixed(1) + '%';
+
+function calcFLMLanding(flmKey, month) {
+  const s = STATE[flmKey][month];
+  const opAcv = s.pipe * (s.erosion/100) * (s.cv/100);
+  const other = FLM[flmKey].other[month];
+  return { cc: s.cc, opAcv, other, total: s.cc + opAcv + other, pipe: s.pipe };
 }
 
-// ── Compute landing for one month ─────────────────────────────────────
-function calcLanding(month, params) {
-  const p = params[month];
-  const opAcv = p.pipe * p.erosion * p.cv;
-  const total = p.cc + opAcv + OTHER_ACTUAL[month];
-  return { cc: p.cc, opAcv, other: OTHER_ACTUAL[month], total };
-}
-
-// ── Render ──────────────────────────────────────────────────────────────
-function render() {
-  const params = getParams();
-
-  // KPIs
-  let totalLanding = 0, totalPred = 0;
-  MONTHS.forEach(m => {
-    const l = calcLanding(m, params);
-    totalLanding += l.total;
-    totalPred    += PRED[m].total;
+function calcTotalLanding(month) {
+  let cc=0, opAcv=0, other=0;
+  FLM_KEYS.forEach(k => {
+    const l = calcFLMLanding(k, month);
+    cc += l.cc; opAcv += l.opAcv; other += l.other;
   });
-  const q4Gap = totalLanding - totalPred;
-  const q4Attain = (totalLanding / totalPred * 100).toFixed(1);
+  return { cc, opAcv, other, total: cc+opAcv+other };
+}
 
-  const kpiRow = document.getElementById('kpiRow');
-  kpiRow.innerHTML = `
-    <div class="kpi ${q4Gap >= 0 ? 'green' : 'red'}">
+function totalPred(month) {
+  let total=0,cc=0,opAcv=0,other=0;
+  FLM_KEYS.forEach(k => {
+    const pd = FLM[k].pred[month];
+    total+=pd.total; cc+=pd.cc; opAcv+=pd.opAcv; other+=pd.other;
+  });
+  return { total, cc, opAcv, other };
+}
+
+// ── Read sidebar inputs into STATE for current FLM tab ───────────────
+function readSidebar() {
+  if (currentTab === 'total') return;
+  const k = currentTab;
+  MONTHS.forEach(m => {
+    const pfx = m.slice(0,3).toLowerCase();
+    STATE[k][m].erosion = +document.getElementById(pfx+'Erosion').value;
+    STATE[k][m].cv      = +document.getElementById(pfx+'CV').value;
+    STATE[k][m].cc      = +document.getElementById(pfx+'CC').value;
+    STATE[k][m].pipe    = +document.getElementById(pfx+'Pipe').value;
+  });
+}
+
+// ── Load FLM state into sidebar ───────────────────────────────────────
+function loadSidebar(k) {
+  MONTHS.forEach(m => {
+    const pfx = m.slice(0,3).toLowerCase();
+    document.getElementById(pfx+'Erosion').value = STATE[k][m].erosion;
+    document.getElementById(pfx+'CV').value      = STATE[k][m].cv;
+    document.getElementById(pfx+'CC').value      = STATE[k][m].cc;
+    document.getElementById(pfx+'Pipe').value    = STATE[k][m].pipe;
+  });
+  document.getElementById('sidebarName').textContent = FLM[k].label;
+}
+
+// ── Render ────────────────────────────────────────────────────────────
+function render() {
+  if (currentTab !== 'total') readSidebar();
+  const content = document.getElementById('mainContent');
+
+  if (currentTab === 'total') {
+    renderTotal(content);
+  } else {
+    renderFLM(currentTab, content);
+  }
+}
+
+function renderTotal(content) {
+  // Q4 KPIs
+  let q4Land=0, q4Pred=0;
+  MONTHS.forEach(m => { q4Land += calcTotalLanding(m).total; q4Pred += totalPred(m).total; });
+  const q4Gap = q4Land - q4Pred;
+  const q4Att = (q4Land/q4Pred*100).toFixed(1);
+
+  let html = kpiHtml(q4Land, q4Pred, 'ECS Total') + '<div class="month-grid">';
+
+  MONTHS.forEach(m => {
+    const l  = calcTotalLanding(m);
+    const pd = totalPred(m);
+    const att = (l.total/pd.total*100).toFixed(1);
+    html += monthCardHtml(m, pd, l, att, null);
+  });
+  html += '</div>';
+
+  // FLM breakdown table
+  html += `<div class="breakdown"><h2>FLM別 Landing 内訳</h2>
+    <table class="bk"><thead><tr>
+      <th>FLM</th>`;
+  MONTHS.forEach(m => html += `<th colspan="3">${m}</th>`);
+  html += `<th colspan="3">FY27 Q4</th></tr>
+    <tr><th></th>`;
+  MONTHS.forEach(() => html += `<th>Pred</th><th>Landing</th><th>Gap</th>`);
+  html += `<th>Pred</th><th>Landing</th><th>Gap</th></tr></thead><tbody>`;
+
+  FLM_KEYS.forEach(k => {
+    const flm = FLM[k];
+    html += `<tr><td>${flm.label}</td>`;
+    let fyPred=0, fyLand=0;
+    MONTHS.forEach(m => {
+      const l  = calcFLMLanding(k, m);
+      const pd = flm.pred[m];
+      const g  = l.total - pd.total;
+      fyPred += pd.total; fyLand += l.total;
+      html += `<td class="pred">${fmt(pd.total)}</td>
+               <td class="land">${fmt(l.total)}</td>
+               <td class="${g>=0?'tpos':'tneg'}">${g>=0?'+':''}${fmt(g)}</td>`;
+    });
+    const fyG = fyLand - fyPred;
+    html += `<td class="pred">${fmt(fyPred)}</td>
+             <td class="land">${fmt(fyLand)}</td>
+             <td class="${fyG>=0?'tpos':'tneg'}">${fyG>=0?'+':''}${fmt(fyG)}</td></tr>`;
+  });
+
+  // Subtotal row
+  html += `<tr class="grand"><td>Total</td>`;
+  let fyTPred=0, fyTLand=0;
+  MONTHS.forEach(m => {
+    const l  = calcTotalLanding(m);
+    const pd = totalPred(m);
+    const g  = l.total - pd.total;
+    fyTPred += pd.total; fyTLand += l.total;
+    html += `<td class="pred">${fmt(pd.total)}</td>
+             <td class="land">${fmt(l.total)}</td>
+             <td class="${g>=0?'tpos':'tneg'}">${g>=0?'+':''}${fmt(g)}</td>`;
+  });
+  const fyTG = fyTLand - fyTPred;
+  html += `<td class="pred">${fmt(fyTPred)}</td>
+           <td class="land">${fmt(fyTLand)}</td>
+           <td class="${fyTG>=0?'tpos':'tneg'}">${fyTG>=0?'+':''}${fmt(fyTG)}</td>
+           </tr></tbody></table></div>`;
+
+  content.innerHTML = html;
+}
+
+function renderFLM(k, content) {
+  const flm = FLM[k];
+  let q4Land=0, q4Pred=0;
+  MONTHS.forEach(m => { q4Land += calcFLMLanding(k,m).total; q4Pred += flm.pred[m].total; });
+
+  let html = kpiHtml(q4Land, q4Pred, flm.label) + '<div class="month-grid">';
+  MONTHS.forEach(m => {
+    const l  = calcFLMLanding(k, m);
+    const pd = flm.pred[m];
+    const att = (l.total/pd.total*100).toFixed(1);
+    const cv = STATE[k][m].cv;
+    const needPipe = pd.opAcv / (cv/100);
+    html += monthCardHtml(m, pd, l, att, { pipe:l.pipe, erosion:STATE[k][m].erosion, cv, needPipe });
+  });
+  html += '</div>';
+
+  // Sensitivity tables
+  html += sensPipeCV(k) + sensCC(k);
+  content.innerHTML = html;
+}
+
+function kpiHtml(q4Land, q4Pred, label) {
+  const q4Gap = q4Land - q4Pred;
+  const q4Att = (q4Land/q4Pred*100).toFixed(1);
+  return `<div class="kpi-row">
+    <div class="kpi ${q4Gap>=0?'green':'red'}">
       <div class="kpi-label">Q4 Landing（シミュレーション）</div>
-      <div class="kpi-val">${fmt(totalLanding)}</div>
-      <div class="kpi-sub">vs Pred ${fmtP(+q4Attain)} | Gap ${fmt(q4Gap)}</div>
+      <div class="kpi-val">${fmt(q4Land)}</div>
+      <div class="kpi-sub">vs Pred ${fmtP(q4Att)} | Gap ${fmt(q4Gap)}</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Q4 Pred（目標）</div>
-      <div class="kpi-val">${fmt(totalPred)}</div>
-      <div class="kpi-sub">$26,800K target</div>
+      <div class="kpi-val">${fmt(q4Pred)}</div>
+      <div class="kpi-sub">${label}</div>
     </div>
-    <div class="kpi ${q4Gap >= 0 ? 'green' : 'amber'}">
+    <div class="kpi ${q4Gap>=0?'green':'red'}">
       <div class="kpi-label">Q4 Gap</div>
-      <div class="kpi-val" style="color:${q4Gap >= 0 ? '#059669' : '#dc2626'}">${fmt(q4Gap)}</div>
+      <div class="kpi-val" style="color:${q4Gap>=0?'#059669':'#dc2626'}">${fmt(q4Gap)}</div>
       <div class="kpi-sub">Landing − Pred</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">達成率</div>
-      <div class="kpi-val">${q4Attain}%</div>
-      <div class="bar-wrap" style="margin-top:8px"><div class="bar-fill" style="width:${Math.min(+q4Attain,100)}%;background:${+q4Attain>=100?'#059669':'#0e7490'}"></div></div>
-    </div>`;
-
-  // Month cards
-  const grid = document.getElementById('monthGrid');
-  grid.innerHTML = '';
-  MONTHS.forEach(m => {
-    const l  = calcLanding(m, params);
-    const pd = PRED[m];
-    const gap  = l.total - pd.total;
-    const att  = (l.total / pd.total * 100).toFixed(1);
-    const p    = params[m];
-
-    const rowHtml = (label, predVal, landVal, cls='') => {
-      const g = landVal - predVal;
-      const gCls = g >= 0 ? 'pos' : 'neg';
-      return `<div class="row ${cls}">
-        <span class="lbl">${label}</span>
-        <span class="num pred">${fmt(predVal)}</span>
-        <span class="num land">${fmt(landVal)}</span>
-        <span class="gap ${gCls}">${g >= 0 ? '+' : ''}${fmt(g)}</span>
-      </div>`;
-    };
-
-    grid.innerHTML += `
-    <div class="card">
-      <div class="card-header">${m}
-        <span class="attain">${att}% attain</span>
-      </div>
-      <div class="card-body">
-        <div class="row header">
-          <span></span>
-          <span class="num" style="color:#6366f1">Pred $</span>
-          <span class="num" style="color:#0ea5e9">Landing $</span>
-          <span class="num">Gap</span>
-        </div>
-        ${rowHtml('CC in Month', pd.cc, l.cc)}
-        ${rowHtml('Op to ACV', pd.opAcv, l.opAcv)}
-        <div class="row" style="font-size:11px;color:#999;padding-left:8px">
-          <span>　└ Pipe×Erosion×CV</span>
-          <span></span>
-          <span class="num" style="color:#999">${fmt(p.pipe)}×${(p.erosion*100).toFixed(0)}%×${(p.cv*100).toFixed(0)}%</span>
-          <span></span>
-        </div>
-        <div class="row" style="font-size:11px;padding-left:8px;background:#fffbeb;border-radius:6px;margin:2px 0">
-          <span style="color:#92400e;font-weight:600">　└ Pred達成必要Pipe</span>
-          <span></span>
-          <span class="num" style="color:#d97706;font-weight:700">${fmt(pd.opAcv / p.cv)}</span>
-          <span style="font-size:10px;color:#b45309;text-align:right">@CV${(p.cv*100).toFixed(0)}%</span>
-        </div>
-        ${rowHtml('Other（Closed）', pd.other, l.other)}
-        ${rowHtml('Commit Total', pd.total, l.total, 'total')}
-        <div style="margin-top:10px;font-size:11px;color:#888;line-height:1.8">
-          <span style="background:#f0fdfa;padding:2px 8px;border-radius:4px;color:#0e7490;font-weight:600">
-            Erosion ${(p.erosion*100).toFixed(0)}% ／ CV ${(p.cv*100).toFixed(0)}%
-          </span>
-        </div>
-      </div>
-    </div>`;
-  });
-
-  // Sensitivity 1: Pipe × CV (November)
-  renderSens1(params);
-  renderSens2(params);
+      <div class="kpi-val">${q4Att}%</div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(+q4Att,100)}%;background:${+q4Att>=100?'#059669':'#0e7490'}"></div></div>
+    </div>
+  </div>`;
 }
 
-function renderSens1(params) {
-  const nov = params.November;
-  const pipes = [6000,7000,8000,9000,10000,11000,12000,13000,14000,15000,16000,17000,18000,19000,20000,21000,22000,23000,24000,25000];
-  const cvs   = [25, 30, 35, 40, 45, 50, 55];
-  const curPipe = nov.pipe;
-  const curCV   = nov.cv * 100;
+function monthCardHtml(m, pd, l, att, params) {
+  const rowHtml = (label, pv, lv, cls='') => {
+    const g = lv - pv;
+    return `<div class="row ${cls}">
+      <span class="lbl">${label}</span>
+      <span class="num pred">${fmt(pv)}</span>
+      <span class="num land">${fmt(lv)}</span>
+      <span class="gap ${g>=0?'pos':'neg'}">${g>=0?'+':''}${fmt(g)}</span>
+    </div>`;
+  };
 
-  let html = `<table class="sens"><thead><tr>
-    <th>Pipe \\ CV%</th>`;
+  let subRows = '';
+  if (params) {
+    subRows = `
+      <div class="sub-row">
+        <span>└ Pipe×Erosion×CV</span>
+        <span>${fmt(params.pipe)}×${params.erosion}%×${params.cv}%</span>
+      </div>
+      <div class="need-pipe">
+        <span>└ Pred達成必要Pipe</span>
+        <span style="font-weight:700">${fmt(params.needPipe)} @CV${params.cv}%</span>
+      </div>`;
+  }
+
+  return `<div class="card">
+    <div class="card-header">${m}<span class="attain">${att}% attain</span></div>
+    <div class="card-body">
+      <div class="row hdr">
+        <span></span><span class="num pred">Pred $</span>
+        <span class="num land">Landing $</span><span class="num">Gap</span>
+      </div>
+      ${rowHtml('CC in Month', pd.cc, l.cc)}
+      ${rowHtml('Op to ACV', pd.opAcv, l.opAcv)}
+      ${subRows}
+      ${rowHtml('Other（Closed）', pd.other, l.other)}
+      ${rowHtml('Commit Total', pd.total, l.total, 'total')}
+    </div>
+  </div>`;
+}
+
+function sensPipeCV(k) {
+  const s = STATE[k].November;
+  const pipes = [1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,12000,15000];
+  const cvs   = [20,25,30,35,40,45,50,55];
+  const predOpAcv = FLM[k].pred.November.opAcv;
+
+  let html = `<div class="sens-section">
+    <h2>感応度分析 — Open Pipe × Conversion Rate（November）</h2>
+    <p style="font-size:11px;color:#888;margin-bottom:8px">各セルはOp to ACV（$K）= Day1 Pipe × CV%。Pred Op to ACV = ${fmt(predOpAcv)} が目安。</p>
+    <table class="sens"><thead><tr><th>Pipe \\ CV%</th>`;
   cvs.forEach(cv => html += `<th>${cv}%</th>`);
   html += '</tr></thead><tbody>';
-
   pipes.forEach(pipe => {
     html += `<tr><td>${fmt(pipe)}</td>`;
     cvs.forEach(cv => {
-      const opAcv = pipe * (cv / 100);
-      const isCur = Math.abs(pipe - curPipe) < 200 && Math.abs(cv - curCV) < 3;
-      const gap   = opAcv - PRED.November.opAcv;
-      const cls   = isCur ? 'highlight-cell' : (gap >= 0 ? 'cell-pos' : 'cell-neg');
-      html += `<td class="${cls}">$${Math.round(opAcv).toLocaleString()}k</td>`;
+      const opAcv = pipe*(cv/100);
+      const isCur = Math.abs(pipe-s.pipe)<600 && Math.abs(cv-s.cv)<3;
+      const gap   = opAcv - predOpAcv;
+      html += `<td class="${isCur?'hl':gap>=0?'cpos':'cneg'}">$${Math.round(opAcv).toLocaleString()}k</td>`;
     });
     html += '</tr>';
   });
-  html += '</tbody></table>';
-  document.getElementById('sensTable').innerHTML = html;
+  html += '</tbody></table></div>';
+  return html;
 }
 
-function renderSens2(params) {
-  const nov = params.November;
-  // 行：1件当たり平均金額 ($K)、列：件数
-  const avgDeals = [5, 8, 10, 13, 15, 20, 25, 30];   // $K/件
-  const counts   = [20, 30, 40, 50, 60, 70, 80, 100, 120, 150]; // 件数
-  const curCC    = nov.cc;
-  const predCC   = PRED.November.cc;
+function sensCC(k) {
+  const s      = STATE[k].November;
+  const predCC = FLM[k].pred.November.cc;
+  const avgs   = [5,8,10,13,15,20,25,30];
+  const counts = [10,20,30,40,50,60,70,80,100,120,150];
 
-  let html = `<table class="sens"><thead><tr>
-    <th>平均単価 \\ 件数</th>`;
+  let html = `<div class="sens-section">
+    <h2>感応度分析 — CC in Month：平均単価 × 件数（November）</h2>
+    <p style="font-size:11px;color:#888;margin-bottom:8px">各セルはCC in Month合計（$K）。Pred CC = ${fmt(predCC)} が目安。</p>
+    <table class="sens"><thead><tr><th>平均単価 \\ 件数</th>`;
   counts.forEach(n => html += `<th>${n}件</th>`);
   html += '</tr></thead><tbody>';
-
-  avgDeals.forEach(avg => {
+  avgs.forEach(avg => {
     html += `<tr><td>$${avg}K/件</td>`;
     counts.forEach(n => {
-      const ccTotal = avg * n;
-      const isCur   = Math.abs(ccTotal - curCC) < 100;
-      const isPred  = Math.abs(ccTotal - predCC) < 100;
-      const gap     = ccTotal - predCC;
-      let cls;
-      if (isCur)        cls = 'highlight-cell';
-      else if (gap >= 0) cls = 'cell-pos';
-      else               cls = 'cell-neg';
-      const label = isCur ? `$${ccTotal.toLocaleString()}k★` : `$${ccTotal.toLocaleString()}k`;
-      html += `<td class="${cls}">${label}</td>`;
+      const cc    = avg*n;
+      const isCur = Math.abs(cc-s.cc)<50;
+      const gap   = cc - predCC;
+      html += `<td class="${isCur?'hl':gap>=0?'cpos':'cneg'}">${isCur?'★':''}$${cc.toLocaleString()}k</td>`;
     });
     html += '</tr>';
   });
   html += `</tbody></table>
-    <p style="font-size:11px;color:#888;margin-top:8px">
-      ★ = 現在設定のCC合計に最も近いセル　／　緑 = Pred CC($${predCC.toLocaleString()}K)超え　／　赤 = Pred CC未達
-    </p>`;
-  document.getElementById('sensTable2').innerHTML = html;
+    <p style="font-size:10px;color:#888;margin-top:6px">★ = 現在設定値に近いセル／緑 = Pred CC超え／グレー = Pred CC未達</p>
+  </div>`;
+  return html;
 }
 
-// ── Input wiring ────────────────────────────────────────────────────
+// ── Tab switch ────────────────────────────────────────────────────────
+function switchTab(tab) {
+  if (currentTab !== 'total') readSidebar(); // save current before switching
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((btn,i) => {
+    const keys = ['total','nitta','hatanaka','kamiya','hagino','yamamoto','kobayashi'];
+    btn.classList.toggle('active', keys[i]===tab);
+  });
+  const sb = document.getElementById('sidebar');
+  if (tab === 'total') {
+    sb.classList.add('hidden');
+  } else {
+    sb.classList.remove('hidden');
+    loadSidebar(tab);
+  }
+  render();
+}
+
+// ── Input wiring ──────────────────────────────────────────────────────
 ['novErosion','novCV','novCC','novPipe',
  'decErosion','decCV','decCC','decPipe',
  'janErosion','janCV','janCC','janPipe'].forEach(id => {
   document.getElementById(id).addEventListener('input', render);
 });
 
-// ── Presets ──────────────────────────────────────────────────────────
-function setVal(id, val) {
-  document.getElementById(id).value = val;
-}
+// ── Presets ───────────────────────────────────────────────────────────
 function applyPreset(name) {
-  const base = {
-    novErosion: 80, novCV: 40, novCC: 1702, novPipe: 6700,
-    decErosion: 55, decCV: 40, decCC: 1949, decPipe: 19317,
-    janErosion: 72, janCV: 40, janCC: 3252, janPipe: 25938,
-  };
-  let vals = { ...base };
-  if (name === 'upside') {
-    vals.novCV += 5; vals.decCV += 5; vals.janCV += 5;
-    vals.novCC = Math.round(vals.novCC * 1.2);
-    vals.decCC = Math.round(vals.decCC * 1.2);
-    vals.janCC = Math.round(vals.janCC * 1.2);
-  } else if (name === 'stretch') {
-    vals.novCV += 10; vals.decCV += 10; vals.janCV += 10;
-    vals.novCC = Math.round(vals.novCC * 1.3);
-    vals.decCC = Math.round(vals.decCC * 1.3);
-    vals.janCC = Math.round(vals.janCC * 1.3);
-  } else if (name === 'downside') {
-    vals.novErosion -= 10; vals.decErosion -= 10; vals.janErosion -= 10;
-  }
-  Object.entries(vals).forEach(([id, val]) => setVal(id, val));
+  if (currentTab === 'total') return;
+  const k = currentTab;
+  MONTHS.forEach(m => {
+    const pfx = m.slice(0,3).toLowerCase();
+    let s = { ...STATE[k][m] };
+    const def = { erosion:FLM[k].defErosion[m], cv:FLM[k].defCV[m], cc:FLM[k].defCC[m], pipe:FLM[k].defPipe[m] };
+    if (name==='current')   s = {...def};
+    if (name==='upside')    { s={...def}; s.cv+=5;  s.cc=Math.round(def.cc*1.2); }
+    if (name==='stretch')   { s={...def}; s.cv+=10; s.cc=Math.round(def.cc*1.3); }
+    if (name==='downside')  { s={...def}; s.erosion=Math.max(0,def.erosion-10); }
+    STATE[k][m] = s;
+    document.getElementById(pfx+'Erosion').value = s.erosion;
+    document.getElementById(pfx+'CV').value      = s.cv;
+    document.getElementById(pfx+'CC').value      = s.cc;
+    document.getElementById(pfx+'Pipe').value    = s.pipe;
+  });
   render();
 }
 
-// Initial render
+// ── Init ──────────────────────────────────────────────────────────────
+document.getElementById('sidebar').classList.add('hidden');
 render();
 </script>
 </body>
