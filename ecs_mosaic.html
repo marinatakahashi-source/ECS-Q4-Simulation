@@ -327,6 +327,7 @@ function getFilteredTeamData(){
 }
 
 renderMosaic('mosaic-mgr', MGR_DATA, 'mgr');
+renderMosaic('mosaic-team', TEAM_DATA, 'team');
 
 document.querySelector('.tab-bar').addEventListener('click', e => {
   const btn = e.target.closest('.tab-btn'); if(!btn) return;
@@ -349,7 +350,7 @@ document.querySelectorAll('.vbtn').forEach(btn => {
     viewModes[pane] = mode;
     document.querySelectorAll(`.vbtn[data-pane="${pane}"]`).forEach(b => b.classList.toggle('on', b.dataset.mode===mode));
     if(pane==='mgr') renderMosaic('mosaic-mgr', MGR_DATA, 'mgr');
-    else renderMosaic('mosaic-team', TEAM_DATA, 'team');
+    else renderMosaic('mosaic-team', getFilteredTeamData(), 'team');
   });
 });
 </script>
