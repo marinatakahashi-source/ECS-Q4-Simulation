@@ -130,10 +130,20 @@
   .flm-gap-section { margin-top: 8px; border-top: 1px dashed #e2e8f0; padding-top: 6px; }
   .flm-gap-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
     letter-spacing: .5px; margin-bottom: 4px; }
-  .flm-gap-row { display: flex; justify-content: space-between; align-items: center;
-    padding: 2px 0; font-size: 11px; }
+  .flm-gap-hdr { display: grid; grid-template-columns: 1fr 64px 64px 64px;
+    gap: 2px; padding: 2px 0 4px; border-bottom: 1px solid #e2e8f0; }
+  .flm-gap-hdr span { font-size: 9px; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; text-align: right; }
+  .flm-gap-hdr span:first-child { text-align: left; }
+  .flm-gap-row { display: grid; grid-template-columns: 1fr 64px 64px 64px;
+    gap: 2px; align-items: center; padding: 2px 0; font-size: 11px;
+    border-bottom: 1px solid #f8fafc; }
+  .flm-gap-row:last-child { border-bottom: none; }
   .flm-gap-name { color: #64748b; font-weight: 500; }
-  .flm-gap-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .flm-gap-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .flm-gap-pred { color: #0e7490; }
+  .flm-gap-land { color: #0d9488; }
+  .flm-gap-val { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
   .flm-gap-val.pos { color: #059669; }
   .flm-gap-val.neg { color: #dc2626; }
 </style>
@@ -358,10 +368,11 @@ function renderTotal(content) {
     const l  = calcTotalLanding(m);
     const pd = totalPred(m);
     const att = (l.total/pd.total*100).toFixed(1);
-    const flmGaps = FLM_KEYS.map(k => ({
-      name: FLM[k].label,
-      gap:  calcFLMLanding(k, m).total - FLM[k].pred[m].total,
-    }));
+    const flmGaps = FLM_KEYS.map(k => {
+      const land = calcFLMLanding(k, m).total;
+      const pred = FLM[k].pred[m].total;
+      return { name: FLM[k].label, pred, landing: land, gap: land - pred };
+    });
     html += monthCardHtml(m, pd, l, att, null, flmGaps);
   });
   html += '</div>';
@@ -490,15 +501,20 @@ function monthCardHtml(m, pd, l, att, params, flmGaps) {
 
   let flmSection = '';
   if (flmGaps) {
-    const rows = flmGaps.map(({name, gap}) => {
+    const rows = flmGaps.map(({name, pred, landing, gap}) => {
       const sign = gap >= 0 ? '+' : '';
       return `<div class="flm-gap-row">
         <span class="flm-gap-name">${name}</span>
+        <span class="flm-gap-num flm-gap-pred">${fmt(pred)}</span>
+        <span class="flm-gap-num flm-gap-land">${fmt(landing)}</span>
         <span class="flm-gap-val ${gap>=0?'pos':'neg'}">${sign}${fmt(gap)}</span>
       </div>`;
     }).join('');
     flmSection = `<div class="flm-gap-section">
       <div class="flm-gap-title">FLM GAP</div>
+      <div class="flm-gap-hdr">
+        <span></span><span>Pred</span><span>Landing</span><span>Gap</span>
+      </div>
       ${rows}
     </div>`;
   }
