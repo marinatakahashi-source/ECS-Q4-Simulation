@@ -2,62 +2,78 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>FY28 Deal Band × ECS Mgr モザイク図</title>
+<title>FY28 Deal Band モザイク図</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f9f9f7;padding:24px;color:#0b0b0b}
 h1{font-size:17px;font-weight:700;margin-bottom:4px}
-.sub{font-size:12px;color:#52514e;margin-bottom:18px;line-height:1.7}
-.summary-bar{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.sub{font-size:12px;color:#52514e;margin-bottom:14px;line-height:1.7}
+.summary-bar{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
 .kpi{background:#fcfcfb;border:1px solid rgba(11,11,11,.1);border-radius:8px;padding:10px 16px;min-width:100px}
 .kpi-lbl{font-size:10px;color:#898781}.kpi-val{font-size:18px;font-weight:700;margin-top:2px}
 .kpi-val.red{color:#e34948}
+.tab-bar{display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #c3c2b7}
+.tab-btn{font-size:13px;font-weight:600;padding:8px 20px;border:none;background:none;cursor:pointer;color:#898781;border-bottom:3px solid transparent;margin-bottom:-2px;font-family:inherit;transition:color .15s}
+.tab-btn.on{color:#0b0b0b;border-bottom-color:#0b0b0b}
+.tab-btn:hover:not(.on){color:#52514e}
+.tab-pane{display:none}.tab-pane.on{display:block}
 .mosaic-wrap{background:#fcfcfb;border:1px solid rgba(11,11,11,.1);border-radius:8px;padding:20px;overflow-x:auto}
 .mosaic-container{position:relative;min-width:700px}
 .x-labels{display:flex;margin-bottom:6px}
 .x-label{text-align:center;font-size:11px;font-weight:600;color:#52514e;padding:0 2px}
 .mosaic-inner{display:flex;gap:3px}
 .band-col{display:flex;flex-direction:column;gap:3px;position:relative}
-.mosaic-cell{position:relative;cursor:pointer;border-radius:4px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 4px;transition:opacity .12s;min-height:36px}
-.mosaic-cell:hover{opacity:.85;z-index:10}
-.cell-mgr{font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center}
+.mosaic-cell{position:relative;cursor:pointer;border-radius:4px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 4px;transition:opacity .12s;min-height:24px}
+.mosaic-cell:hover{opacity:.82;z-index:10}
+.cell-name{font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center}
 .cell-rate{font-size:13px;font-weight:800;line-height:1.1;text-align:center}
 .cell-gap{font-size:10px;opacity:.85;text-align:center;white-space:nowrap}
-.target-line{position:absolute;left:0;right:0;border-top:2px dashed rgba(0,0,0,0.35);pointer-events:none}
-.y-label-col{display:flex;flex-direction:column;gap:3px;margin-right:6px;justify-content:flex-start}
-.y-label{font-size:9px;color:#898781;text-align:right;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;white-space:nowrap}
-.band-label-area{display:flex;gap:3px;margin-top:10px}
+.band-label-area{display:flex;gap:3px;margin-top:8px}
 .band-sub{text-align:center;font-size:10px;color:#898781}
-.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;align-items:center}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#52514e}
-.legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
-#tooltip{position:fixed;background:#fcfcfb;border:1px solid rgba(11,11,11,.12);border-radius:6px;padding:10px 12px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .1s;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:260px;line-height:1.65}
-#tooltip.show{opacity:1}
-.tt-row{display:flex;justify-content:space-between;gap:14px;margin-top:2px}
-.tt-lbl{color:#898781}.tt-val{font-weight:600;font-variant-numeric:tabular-nums}
-.view-toggle{display:flex;gap:8px;margin-bottom:16px;align-items:center}
+.legend-swatch{width:13px;height:13px;border-radius:3px;flex-shrink:0}
+.view-toggle{display:flex;gap:8px;margin-bottom:12px;align-items:center}
 .vbtn{font-size:11px;padding:4px 12px;border-radius:12px;border:1px solid #c3c2b7;background:#fcfcfb;color:#52514e;cursor:pointer;font-family:inherit}
 .vbtn.on{background:#0b0b0b;color:#fff;border-color:#0b0b0b}
+#tooltip{position:fixed;background:#fcfcfb;border:1px solid rgba(11,11,11,.12);border-radius:6px;padding:10px 12px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .1s;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:270px;line-height:1.65}
+#tooltip.show{opacity:1}
 </style>
 </head>
 <body>
-<h1>FY28 Deal Band × ECS Mgr モザイク図</h1>
+<h1>FY28 Deal Band × モザイク図</h1>
 <p class="sub">
-  四角形の<strong>面積 = BCO金額</strong>（横幅: Deal Band比率、縦高さ: ECS Mgr比率）<br>
-  色: Owned率に基づくギャップ度合い　<span style="color:#22c55e">■ 緑 = 目標達成</span>　<span style="color:#e34948">■ 赤 = ギャップ大</span><br>
-  破線 = 目標Owned率ライン　目標: 0-10k <strong>75%</strong>・10-25k <strong>70%</strong>・25-50k <strong>70%</strong>・50-100k <strong>66%</strong>
+  四角形の<strong>面積 = BCO金額</strong>（横幅: Deal Band比率、縦高さ: 各行のBCO比率）<br>
+  色: Owned率に基づくギャップ度合い　目標: 0-10k <strong>75%</strong>・10-25k <strong>70%</strong>・25-50k <strong>70%</strong>・50-100k <strong>66%</strong>
 </p>
 
 <div class="summary-bar" id="kpi-row"></div>
 
-<div class="view-toggle">
-  <span style="font-size:11px;color:#898781">縦軸サイズ:</span>
-  <button class="vbtn on" data-mode="prop">BCO金額比率</button>
-  <button class="vbtn" data-mode="equal">均等</button>
+<div class="tab-bar">
+  <button class="tab-btn on" data-tab="mgr">ECS Mgr別ビュー</button>
+  <button class="tab-btn" data-tab="team">チーム別ビュー</button>
 </div>
 
-<div class="mosaic-wrap">
-  <div class="mosaic-container" id="mosaic-container"></div>
+<div class="tab-pane on" id="pane-mgr">
+  <div class="view-toggle">
+    <span style="font-size:11px;color:#898781">縦軸:</span>
+    <button class="vbtn on" data-mode="prop" data-pane="mgr">BCO金額比率</button>
+    <button class="vbtn" data-mode="equal" data-pane="mgr">均等</button>
+  </div>
+  <div class="mosaic-wrap">
+    <div class="mosaic-container" id="mosaic-mgr"></div>
+  </div>
+</div>
+
+<div class="tab-pane" id="pane-team">
+  <div class="view-toggle">
+    <span style="font-size:11px;color:#898781">縦軸:</span>
+    <button class="vbtn on" data-mode="prop" data-pane="team">BCO金額比率</button>
+    <button class="vbtn" data-mode="equal" data-pane="team">均等</button>
+  </div>
+  <div class="mosaic-wrap">
+    <div class="mosaic-container" id="mosaic-team"></div>
+  </div>
 </div>
 
 <div class="legend">
@@ -67,10 +83,6 @@ h1{font-size:17px;font-weight:700;margin-bottom:4px}
   <div class="legend-item"><div class="legend-swatch" style="background:#fef9c3;border:1px solid #fde68a"></div>50-65%</div>
   <div class="legend-item"><div class="legend-swatch" style="background:rgb(240,160,100)"></div>低進捗</div>
   <div class="legend-item"><div class="legend-swatch" style="background:rgb(200,30,30)"></div>ギャップ大</div>
-  <div class="legend-item" style="margin-left:8px">
-    <div style="width:20px;border-top:2px dashed rgba(0,0,0,.4)"></div>
-    <span>目標ライン</span>
-  </div>
 </div>
 
 <div id="tooltip"></div>
@@ -85,42 +97,64 @@ const ALL_MGRS = Object.keys(MGR_COLOR);
 
 function fmtK(n){return n===0?'—':'$'+Math.round(n/1000).toLocaleString()+'k'}
 
-// ECS Mgr別にRAWを集計
+function gapColor(owned_rate, target, n){
+  if(n===0) return {bg:'#ebebeb',fg:'#aaa'};
+  const progress = Math.min(owned_rate/target, 1.0);
+  if(progress >= 1.0) return {bg:'#22c55e',fg:'#fff'};
+  if(progress >= 0.85) return {bg:'#d1fae5',fg:'#065f46'};
+  if(progress >= 0.65) return {bg:'#d9f5e8',fg:'#1a7a50'};
+  if(progress >= 0.5)  return {bg:'#fef9c3',fg:'#854d0e'};
+  const t = Math.pow(Math.max(0,1 - progress*2), 0.5);
+  const r = Math.round(254-t*(254-200)), g2=Math.round(242-t*(242-30)), bl=Math.round(240-t*(240-30));
+  return {bg:`rgb(${r},${g2},${bl})`, fg: t>0.45?'#fff':'#1a0a00'};
+}
+
 function buildMgrData(){
   const map = {};
   ALL_MGRS.forEach(m => {
-    map[m] = {ecs_mgr:m, total_amt:0, total_owned_amt:0, bands:{}};
+    map[m] = {key:m, label:m, total_amt:0, total_owned_amt:0, bands:{}};
     BANDS.forEach(b => map[m].bands[b] = {amt:0,owned_amt:0,n:0,owned_n:0,target:TARGETS[b]});
   });
   RAW.forEach(d => {
-    const m = d.ecs_mgr;
-    if(!map[m]) return;
-    map[m].total_amt += d.total_amt;
-    map[m].total_owned_amt += d.total_owned_amt;
-    BANDS.forEach(b => {
-      const v = d.bands[b]||{};
-      map[m].bands[b].amt      += v.amt||0;
-      map[m].bands[b].owned_amt += v.owned_amt||0;
-      map[m].bands[b].n        += v.n||0;
-      map[m].bands[b].owned_n  += v.owned_n||0;
+    const m = d.ecs_mgr; if(!map[m]) return;
+    map[m].total_amt += d.total_amt; map[m].total_owned_amt += d.total_owned_amt;
+    BANDS.forEach(b => { const v=d.bands[b]||{};
+      map[m].bands[b].amt+=v.amt||0; map[m].bands[b].owned_amt+=v.owned_amt||0;
+      map[m].bands[b].n+=v.n||0; map[m].bands[b].owned_n+=v.owned_n||0;
     });
   });
   ALL_MGRS.forEach(m => {
-    map[m].overall_owned_rate = map[m].total_amt > 0 ? map[m].total_owned_amt/map[m].total_amt*100 : 0;
+    map[m].overall_owned_rate = map[m].total_amt>0 ? map[m].total_owned_amt/map[m].total_amt*100 : 0;
     map[m].total_gap = 0;
-    BANDS.forEach(b => {
-      const v = map[m].bands[b];
-      v.owned_rate = v.amt > 0 ? v.owned_amt/v.amt*100 : 0;
-      v.gap_amt    = Math.max(0, v.amt*v.target/100 - v.owned_amt);
+    BANDS.forEach(b => { const v=map[m].bands[b];
+      v.owned_rate = v.amt>0 ? v.owned_amt/v.amt*100 : 0;
+      v.gap_amt = Math.max(0, v.amt*v.target/100 - v.owned_amt);
       map[m].total_gap += v.gap_amt;
     });
   });
   return ALL_MGRS.map(m => map[m]);
 }
 
-const MGR_DATA = buildMgrData();
+function buildTeamData(){
+  return RAW
+    .filter(d => ALL_MGRS.includes(d.ecs_mgr) && d.total_amt > 0)
+    .sort((a,b) => b.total_amt - a.total_amt)
+    .map(d => ({
+      key: d.lvl7+'|'+d.ecs_mgr,
+      label: d.lvl7.length > 22 ? d.lvl7.slice(0,20)+'…' : d.lvl7,
+      full_label: d.lvl7,
+      ecs_mgr: d.ecs_mgr,
+      total_amt: d.total_amt,
+      total_owned_amt: d.total_owned_amt,
+      overall_owned_rate: d.overall_owned_rate,
+      total_gap: d.total_gap,
+      bands: d.bands
+    }));
+}
 
-// KPI
+const MGR_DATA  = buildMgrData();
+const TEAM_DATA = buildTeamData();
+
 const totalBCO   = MGR_DATA.reduce((s,m)=>s+m.total_amt,0);
 const totalOwned = MGR_DATA.reduce((s,m)=>s+m.total_owned_amt,0);
 const totalGap   = MGR_DATA.reduce((s,m)=>s+m.total_gap,0);
@@ -132,160 +166,129 @@ document.getElementById('kpi-row').innerHTML=`
   <div class="kpi"><div class="kpi-lbl">現Owned率（金額）</div><div class="kpi-val">${overallRate.toFixed(1)}%</div></div>
   <div class="kpi"><div class="kpi-lbl">FY28目標</div><div class="kpi-val" style="color:#1baf7a">70%</div></div>`;
 
-// 色関数
-function gapColor(owned_rate, target, n){
-  if(n===0) return {bg:'#ebebeb',fg:'#aaa'};
-  const progress = Math.min(owned_rate/target, 1.0);
-  if(progress >= 1.0) return {bg:'#22c55e',fg:'#fff'};
-  if(progress >= 0.85) return {bg:'#d1fae5',fg:'#065f46'};
-  if(progress >= 0.65) return {bg:'#d9f5e8',fg:'#1a7a50'};
-  if(progress >= 0.5)  return {bg:'#fef9c3',fg:'#854d0e'};
-  // gap大 → 赤グラデ
-  const t = Math.pow(Math.max(0,1 - progress*2), 0.5);
-  const r = Math.round(254-t*(254-200)), g2= Math.round(242-t*(242-30)), bl=Math.round(240-t*(240-30));
-  return {bg:`rgb(${r},${g2},${bl})`, fg: t>0.45?'#fff':'#1a0a00'};
-}
+const viewModes = {mgr:'prop', team:'prop'};
 
-let viewMode = 'prop'; // 'prop' | 'equal'
+function renderMosaic(containerId, rows, paneKey){
+  const TOTAL_H = 500;
+  const GAP = 2;
+  const mode = viewModes[paneKey];
 
-function render(){
-  const TOTAL_H = 480; // モザイク図の総高さpx
-  const TOTAL_W_PX = 900; // 総横幅px（参照用）
-  const GAP = 3;
-
-  // バンド別の全BCO合計（横幅比率用）
   const bandTotals = {};
-  BANDS.forEach(b => {
-    bandTotals[b] = MGR_DATA.reduce((s,m)=>s+m.bands[b].amt,0);
-  });
+  BANDS.forEach(b => bandTotals[b] = rows.reduce((s,r)=>s+(r.bands[b]?.amt||0),0));
   const grandTotal = Object.values(bandTotals).reduce((a,b)=>a+b,0);
 
-  const container = document.getElementById('mosaic-container');
+  const container = document.getElementById(containerId);
   container.innerHTML = '';
 
-  // ラベル行（上: バンド名）
+  if(paneKey === 'mgr'){
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;';
+    ALL_MGRS.forEach(m => {
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:11px;';
+      item.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${MGR_COLOR[m]}"></span>${m.split(' ').slice(-1)[0]}`;
+      legend.appendChild(item);
+    });
+    container.appendChild(legend);
+  }
+
   const xLabels = document.createElement('div');
   xLabels.className = 'x-labels';
-  xLabels.style.paddingLeft = '0px';
 
-  // モザイク本体
   const inner = document.createElement('div');
   inner.className = 'mosaic-inner';
   inner.style.height = TOTAL_H + 'px';
 
-  // バンド列サイズ行（下）
   const bandSubRow = document.createElement('div');
   bandSubRow.className = 'band-label-area';
 
-  BANDS.forEach((b, bi) => {
+  BANDS.forEach(b => {
     const bTotal = bandTotals[b];
-    const bandShare = grandTotal > 0 ? bTotal / grandTotal : 0.25;
-    // 横幅: flex-grow比率を使う
-    const flexW = bandShare * 100;
+    const flexW = grandTotal > 0 ? bTotal/grandTotal*100 : 25;
 
-    // 上ラベル
     const xl = document.createElement('div');
     xl.className = 'x-label';
     xl.style.flex = `${flexW} 0 0`;
-    xl.innerHTML = `<span style="font-size:12px;font-weight:700">${b}</span>`;
+    xl.innerHTML = `<strong>${b}</strong>`;
     xLabels.appendChild(xl);
 
-    // カラム
     const col = document.createElement('div');
     col.className = 'band-col';
     col.style.flex = `${flexW} 0 0`;
     col.style.height = TOTAL_H + 'px';
 
-    // 各Mgrセル
-    MGR_DATA.forEach((mgrD, mi) => {
-      const v = mgrD.bands[b];
-      // 縦高さ
+    rows.forEach(row => {
+      const v = row.bands[b] || {amt:0,owned_amt:0,n:0,owned_n:0,owned_rate:0,gap_amt:0,target:TARGETS[b]};
       let cellH;
-      if(viewMode === 'equal'){
-        cellH = (TOTAL_H - GAP*(MGR_DATA.length-1)) / MGR_DATA.length;
+      if(mode === 'equal'){
+        cellH = (TOTAL_H - GAP*(rows.length-1)) / rows.length;
       } else {
-        // そのバンド内でのMgr BCO比率
-        const mgrShare = bTotal > 0 ? v.amt / bTotal : 1/MGR_DATA.length;
-        cellH = Math.max(32, mgrShare * (TOTAL_H - GAP*(MGR_DATA.length-1)));
+        const share = bTotal > 0 ? v.amt/bTotal : 1/rows.length;
+        cellH = Math.max(24, share * (TOTAL_H - GAP*(rows.length-1)));
       }
 
-      const {bg,fg} = gapColor(v.owned_rate, v.target, v.n);
-      const achieved = v.owned_rate >= v.target && v.n > 0;
-      const targetPct = v.target;
-
+      const {bg, fg} = gapColor(v.owned_rate, v.target, v.n);
       const cell = document.createElement('div');
       cell.className = 'mosaic-cell';
       cell.style.cssText = `background:${bg};color:${fg};height:${cellH}px;flex-shrink:0;`;
-      cell.dataset.mgr  = mgrD.ecs_mgr;
-      cell.dataset.band = b;
+      cell.dataset.rowKey = row.key || row.label;
+      cell.dataset.band   = b;
+      cell.dataset.pane   = paneKey;
 
-      // 目標ラインの位置 = セル高さ × (100 - target) / 100 (上端=100%、下端=0%)
-      const targetLineY = cellH * (1 - targetPct/100);
-      const targetLine = document.createElement('div');
-      targetLine.className = 'target-line';
-      targetLine.style.top = targetLineY + 'px';
-      cell.appendChild(targetLine);
-
-      // テキスト（セルが十分大きい場合のみ表示）
-      if(cellH >= 36){
-        const lastName = mgrD.ecs_mgr.split(' ').slice(-1)[0];
-        cell.innerHTML += `
-          <span class="cell-mgr" style="color:${fg}">${lastName}</span>
-          <span class="cell-rate" style="color:${fg}">${achieved?'✓':''} ${v.owned_rate.toFixed(0)}%</span>
-          ${cellH >= 52 ? `<span class="cell-gap" style="color:${fg}">${v.n>0?fmtK(v.gap_amt):''}</span>` : ''}`;
+      if(paneKey === 'team' && row.ecs_mgr && MGR_COLOR[row.ecs_mgr]){
+        cell.style.borderLeft = `3px solid ${MGR_COLOR[row.ecs_mgr]}`;
       }
 
+      if(cellH >= 32){
+        const name = paneKey === 'mgr' ? row.label.split(' ').slice(-1)[0] : row.label;
+        cell.innerHTML = `
+          <span class="cell-name" style="color:${fg}">${name}</span>
+          <span class="cell-rate" style="color:${fg}">${v.owned_rate.toFixed(0)}%</span>
+          ${cellH >= 50 ? `<span class="cell-gap" style="color:${fg}">${v.n>0?fmtK(v.gap_amt):''}</span>` : ''}`;
+      }
       col.appendChild(cell);
     });
 
     inner.appendChild(col);
 
-    // 下ラベル
     const bs = document.createElement('div');
     bs.className = 'band-sub';
     bs.style.flex = `${flexW} 0 0`;
-    bs.innerHTML = `${fmtK(bTotal)}<br><span style="font-size:9px">${(bandShare*100).toFixed(0)}%</span>`;
+    bs.innerHTML = `${fmtK(bTotal)}<br><span style="font-size:9px">${(flexW).toFixed(0)}%</span>`;
     bandSubRow.appendChild(bs);
   });
 
-  // 右側にMgr凡例（縦ラベル）
-  // → 代わりにツールチップで対応。各セルに色ドット＆Mgr名を入れた
-
-  // XラベルにMgr色凡例を追加
-  const mgrLegend = document.createElement('div');
-  mgrLegend.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;margin-top:4px;';
-  ALL_MGRS.forEach(m => {
-    const item = document.createElement('div');
-    item.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:11px;';
-    item.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${MGR_COLOR[m]}"></span>${m.split(' ').slice(-1)[0]}`;
-    mgrLegend.appendChild(item);
-  });
-
-  container.appendChild(mgrLegend);
   container.appendChild(xLabels);
   container.appendChild(inner);
+  const bw = document.createElement('div');
+  bw.style.cssText = 'display:flex;margin-top:6px;';
+  bw.appendChild(bandSubRow);
+  container.appendChild(bw);
 
-  // 下ラベル
-  const bottomWrap = document.createElement('div');
-  bottomWrap.style.cssText = 'display:flex;margin-top:6px;';
-  bandSubRow.style.flex = '1';
-  bottomWrap.appendChild(bandSubRow);
-  container.appendChild(bottomWrap);
-
-  // tooltip
   const tt = document.getElementById('tooltip');
-  container.querySelectorAll('.mosaic-cell[data-mgr]').forEach(el => {
+  container.querySelectorAll('.mosaic-cell[data-band]').forEach(el => {
     el.addEventListener('mouseenter', () => {
-      const mgrName = el.dataset.mgr;
-      const band    = el.dataset.band;
-      const mgrD    = MGR_DATA.find(m => m.ecs_mgr === mgrName);
-      if(!mgrD) return;
-      const v = mgrD.bands[band];
-      const hex = MGR_COLOR[mgrName]||'#898781';
-      tt.innerHTML = `<strong style="color:${hex}">${mgrName}</strong>
+      const band = el.dataset.band;
+      const p    = el.dataset.pane;
+      let row, ttTitle, mgrColor;
+      if(p === 'mgr'){
+        const key = el.dataset.rowKey;
+        row = MGR_DATA.find(r => r.key === key);
+        ttTitle = row ? row.label : key;
+        mgrColor = MGR_COLOR[ttTitle] || '#898781';
+      } else {
+        const key = el.dataset.rowKey;
+        row = TEAM_DATA.find(r => (r.key||r.label) === key);
+        ttTitle = row ? row.full_label : key;
+        mgrColor = row && MGR_COLOR[row.ecs_mgr] ? MGR_COLOR[row.ecs_mgr] : '#898781';
+      }
+      if(!row) return;
+      const v = row.bands[band] || {amt:0,owned_amt:0,n:0,owned_n:0,owned_rate:0,gap_amt:0,target:TARGETS[band]};
+      tt.innerHTML = `<strong style="color:${mgrColor}">${ttTitle}</strong>
+        ${p==='team'&&row.ecs_mgr?`<div style="font-size:10px;color:#898781">ECS Mgr: ${row.ecs_mgr}</div>`:''}
         <div style="font-size:11px;font-weight:600;margin-top:2px">Deal Band: ${band}（目標${v.target}%）</div>
         <div style="border-top:1px solid #e1e0d9;margin:5px 0"></div>
-        <div style="display:flex;justify-content:space-between;gap:14px;margin-top:2px"><span style="color:#898781">BCO（${band}）</span><span style="font-weight:600">${fmtK(v.amt)}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:14px"><span style="color:#898781">BCO金額</span><span style="font-weight:600">${fmtK(v.amt)}</span></div>
         <div style="display:flex;justify-content:space-between;gap:14px;margin-top:2px"><span style="color:#898781">Owned金額</span><span style="font-weight:600">${fmtK(v.owned_amt)}</span></div>
         <div style="display:flex;justify-content:space-between;gap:14px;margin-top:2px"><span style="color:#898781">現Owned率</span><span style="font-weight:600;color:${v.owned_rate>=v.target?'#1baf7a':'#e34948'}">${v.owned_rate.toFixed(1)}%</span></div>
         <div style="display:flex;justify-content:space-between;gap:14px;margin-top:2px"><span style="color:#898781">追加必要額</span><span style="font-weight:600;color:#e34948">${fmtK(v.gap_amt)}</span></div>
@@ -293,21 +296,35 @@ function render(){
       tt.classList.add('show');
     });
     el.addEventListener('mousemove', e => {
-      const x = e.clientX+14, y = e.clientY-10;
-      tt.style.left = (x+270>window.innerWidth ? e.clientX-284 : x)+'px';
-      tt.style.top  = y+'px';
+      const x=e.clientX+14, y=e.clientY-10;
+      tt.style.left=(x+280>window.innerWidth?e.clientX-294:x)+'px';
+      tt.style.top=y+'px';
     });
     el.addEventListener('mouseleave', () => tt.classList.remove('show'));
   });
 }
 
-render();
+renderMosaic('mosaic-mgr', MGR_DATA, 'mgr');
 
-document.querySelector('.view-toggle').addEventListener('click', e => {
-  const btn = e.target.closest('.vbtn'); if(!btn) return;
-  viewMode = btn.dataset.mode;
-  document.querySelectorAll('.vbtn').forEach(b => b.classList.toggle('on', b.dataset.mode===viewMode));
-  render();
+document.querySelector('.tab-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn'); if(!btn) return;
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('on', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('on', p.id==='pane-'+tab));
+  if(tab==='team' && !document.getElementById('mosaic-team').hasChildNodes()){
+    renderMosaic('mosaic-team', TEAM_DATA, 'team');
+  }
+});
+
+document.querySelectorAll('.vbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pane = btn.dataset.pane;
+    const mode = btn.dataset.mode;
+    viewModes[pane] = mode;
+    document.querySelectorAll(`.vbtn[data-pane="${pane}"]`).forEach(b => b.classList.toggle('on', b.dataset.mode===mode));
+    if(pane==='mgr') renderMosaic('mosaic-mgr', MGR_DATA, 'mgr');
+    else renderMosaic('mosaic-team', TEAM_DATA, 'team');
+  });
 });
 </script>
 </body>
