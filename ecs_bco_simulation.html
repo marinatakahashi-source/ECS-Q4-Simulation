@@ -377,6 +377,7 @@ function renderTotal(content) {
   });
   html += '</div>';
 
+  html += sensPipeCVTotal() + sensCCTotal();
 
   content.innerHTML = html;
 }
@@ -488,6 +489,64 @@ function monthCardHtml(m, pd, l, att, params, flmGaps) {
       ${flmSection}
     </div>
   </div>`;
+}
+
+// ── Total用感応度分析（全FLM合算ベース、November基準） ────────────────
+function sensPipeCVTotal() {
+  // 全FLMのPipe合計・平均CV・Pred OpACV合計（November）
+  const totalPipe    = FLM_KEYS.reduce((s,k) => s + STATE[k].November.pipe, 0);
+  const avgCV        = Math.round(FLM_KEYS.reduce((s,k) => s + STATE[k].November.cv, 0) / FLM_KEYS.length);
+  const predOpAcv    = totalPred('November').opAcv;
+
+  const pipes = [3000,4000,5000,6000,7000,8000,9000,10000,12000,15000,18000,20000];
+  const cvs   = [20,25,30,35,40,45,50,55];
+
+  let html = `<div class="sens-section">
+    <h2>感応度分析 — Open Pipe × Conversion Rate（November・Total）</h2>
+    <p style="font-size:11px;color:#888;margin-bottom:8px">各セルはOp to ACV（$K）= Pipe合計 × CV%。Pred Op to ACV = ${fmt(predOpAcv)} が目安。現在のPipe合計 = ${fmt(totalPipe)}、平均CV = ${avgCV}%</p>
+    <table class="sens"><thead><tr><th>Pipe \\ CV%</th>`;
+  cvs.forEach(cv => html += `<th>${cv}%</th>`);
+  html += '</tr></thead><tbody>';
+  pipes.forEach(pipe => {
+    html += `<tr><td>${fmt(pipe)}</td>`;
+    cvs.forEach(cv => {
+      const opAcv = pipe * (cv/100);
+      const isCur = Math.abs(pipe - totalPipe) < totalPipe * 0.08 && Math.abs(cv - avgCV) < 3;
+      const gap   = opAcv - predOpAcv;
+      html += `<td class="${isCur?'hl':gap>=0?'cpos':'cneg'}">$${Math.round(opAcv).toLocaleString()}k</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function sensCCTotal() {
+  const totalCC   = FLM_KEYS.reduce((s,k) => s + STATE[k].November.cc, 0);
+  const predCC    = totalPred('November').cc;
+  const avgs   = [5,8,10,13,15,20,25,30];
+  const counts = [10,20,30,40,50,60,70,80,100,120,150];
+
+  let html = `<div class="sens-section">
+    <h2>感応度分析 — CC in Month：平均単価 × 件数（November・Total）</h2>
+    <p style="font-size:11px;color:#888;margin-bottom:8px">各セルはCC in Month合計（$K）。Pred CC = ${fmt(predCC)} が目安。現在の設定合計 = ${fmt(totalCC)}</p>
+    <table class="sens"><thead><tr><th>平均単価 \\ 件数</th>`;
+  counts.forEach(n => html += `<th>${n}件</th>`);
+  html += '</tr></thead><tbody>';
+  avgs.forEach(avg => {
+    html += `<tr><td>$${avg}K/件</td>`;
+    counts.forEach(n => {
+      const cc    = avg * n;
+      const isCur = Math.abs(cc - totalCC) < totalCC * 0.08;
+      const gap   = cc - predCC;
+      html += `<td class="${isCur?'hl':gap>=0?'cpos':'cneg'}">${isCur?'★':''}$${cc.toLocaleString()}k</td>`;
+    });
+    html += '</tr>';
+  });
+  html += `</tbody></table>
+    <p style="font-size:10px;color:#888;margin-top:6px">★ = 現在設定値に近いセル／緑 = Pred CC超え／グレー = Pred CC未達</p>
+  </div>`;
+  return html;
 }
 
 function sensPipeCV(k) {
