@@ -157,7 +157,7 @@ function buildMgrData(){
 
 function buildTeamData(){
   return RAW
-    .filter(d => ALL_MGRS.includes(d.ecs_mgr) && d.total_amt > 0)
+    .filter(d => ALL_MGRS.includes(d.ecs_mgr) && d.total_amt > 0 && d.lvl5 !== 'Atsushi Mito')
     .sort((a,b) => b.total_amt - a.total_amt)
     .map(d => ({
       key: d.lvl7+'|'+d.ecs_mgr,
