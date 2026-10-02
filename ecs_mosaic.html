@@ -36,6 +36,16 @@ h1{font-size:17px;font-weight:700;margin-bottom:4px}
 .view-toggle{display:flex;gap:8px;margin-bottom:12px;align-items:center}
 .vbtn{font-size:11px;padding:4px 12px;border-radius:12px;border:1px solid #c3c2b7;background:#fcfcfb;color:#52514e;cursor:pointer;font-family:inherit}
 .vbtn.on{background:#0b0b0b;color:#fff;border-color:#0b0b0b}
+.filter-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.filter-lbl{font-size:11px;color:#898781;white-space:nowrap;flex-shrink:0}
+.filter-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fpill{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;transition:opacity .12s;white-space:nowrap}
+.fpill:hover{opacity:.82}
+.fpill.all-pill{background:#0b0b0b;color:#fff}
+.fpill.all-pill.inactive{background:#e8e7e3;color:#52514e}
+.fpill.lvl6-pill{background:none;border:1.5px solid #c3c2b7;color:#52514e;font-weight:500}
+.fpill.lvl6-pill.active{background:#0b0b0b;color:#fff;border-color:#0b0b0b}
+.lvl6-sep{font-size:11px;color:#c3c2b7;padding:0 2px;align-self:center}
 #tooltip{position:fixed;background:#fcfcfb;border:1px solid rgba(11,11,11,.12);border-radius:6px;padding:10px 12px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .1s;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:270px;line-height:1.65}
 #tooltip.show{opacity:1}
 </style>
@@ -66,23 +76,19 @@ h1{font-size:17px;font-weight:700;margin-bottom:4px}
 </div>
 
 <div class="tab-pane" id="pane-team">
-  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px">
-    <div class="view-toggle" style="margin-bottom:0">
+  <div style="margin-bottom:12px">
+    <div class="view-toggle" style="margin-bottom:10px">
       <span style="font-size:11px;color:#898781">縦軸:</span>
       <button class="vbtn on" data-mode="prop" data-pane="team">BCO金額比率</button>
       <button class="vbtn" data-mode="equal" data-pane="team">均等</button>
     </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <span style="font-size:11px;color:#898781">ECS Mgr:</span>
-      <select id="team-mgr-filter" style="font-size:12px;padding:4px 8px;border:1px solid #c3c2b7;border-radius:6px;background:#fcfcfb;color:#0b0b0b;font-family:inherit;cursor:pointer">
-        <option value="ALL">全員表示</option>
-      </select>
+    <div class="filter-row">
+      <span class="filter-lbl">ECS Mgr:</span>
+      <div class="filter-pills" id="mgr-pills"></div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <span style="font-size:11px;color:#898781">LVL6:</span>
-      <select id="team-lvl6-filter" style="font-size:12px;padding:4px 8px;border:1px solid #c3c2b7;border-radius:6px;background:#fcfcfb;color:#0b0b0b;font-family:inherit;cursor:pointer">
-        <option value="ALL">全員表示</option>
-      </select>
+    <div class="filter-row">
+      <span class="filter-lbl">LVL6:</span>
+      <div class="filter-pills" id="lvl6-pills"></div>
     </div>
   </div>
   <div class="mosaic-wrap">
@@ -317,33 +323,111 @@ function renderMosaic(containerId, rows, paneKey){
   });
 }
 
-// セレクトボックスにMgrオプションを追加
-const mgrSelect = document.getElementById('team-mgr-filter');
-ALL_MGRS.forEach(m => {
-  const opt = document.createElement('option');
-  opt.value = m;
-  opt.textContent = m;
-  mgrSelect.appendChild(opt);
-});
-
-const lvl6Select = document.getElementById('team-lvl6-filter');
-const ALL_LVL6 = [...new Set(TEAM_DATA.map(r => r.lvl6).filter(Boolean))].sort();
-ALL_LVL6.forEach(l => {
-  const opt = document.createElement('option');
-  opt.value = l;
-  const short = l.replace(/^(ANL - JP - |JP - FS - EBU\d+ - |JP - PS\d+ - )/,'');
-  opt.textContent = short.length > 30 ? short.slice(0,28)+'…' : short;
-  lvl6Select.appendChild(opt);
-});
+// --- ECS Mgr ピルボタン ---
+let activeMgr = 'ALL';
+let activeLvl6 = 'ALL';
 
 function getFilteredTeamData(){
-  const mgr = mgrSelect.value;
-  const l6  = lvl6Select.value;
   return TEAM_DATA.filter(r =>
-    (mgr === 'ALL' || r.ecs_mgr === mgr) &&
-    (l6  === 'ALL' || r.lvl6   === l6)
+    (activeMgr  === 'ALL' || r.ecs_mgr === activeMgr) &&
+    (activeLvl6 === 'ALL' || r.lvl6    === activeLvl6)
   );
 }
+
+function buildMgrPills(){
+  const container = document.getElementById('mgr-pills');
+  container.innerHTML = '';
+  // 全表示ボタン
+  const allBtn = document.createElement('button');
+  allBtn.className = 'fpill all-pill' + (activeMgr === 'ALL' ? '' : ' inactive');
+  allBtn.textContent = '全表示';
+  allBtn.addEventListener('click', () => { activeMgr = 'ALL'; buildMgrPills(); rerender(); });
+  container.appendChild(allBtn);
+  // 各Mgrピル
+  ALL_MGRS.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'fpill';
+    const color = MGR_COLOR[m];
+    const isActive = activeMgr === m;
+    btn.style.cssText = isActive
+      ? `background:${color};color:#fff;border:none`
+      : `background:none;border:1.5px solid ${color};color:${color}`;
+    btn.textContent = m.split(' ').slice(-1)[0];
+    btn.title = m;
+    btn.addEventListener('click', () => { activeMgr = m; buildMgrPills(); buildLvl6Pills(); rerender(); });
+    container.appendChild(btn);
+  });
+}
+
+// LVL6はECS Mgrでフィルタされたチームのlvl6だけ表示
+// LVL5グループ区切り付き
+const LVL6_LVL5 = {};
+TEAM_DATA.forEach(r => { if(r.lvl6) LVL6_LVL5[r.lvl6] = r.lvl6; });
+
+// lvl5ごとにlvl6をグルーピング
+function buildLvl6Pills(){
+  const container = document.getElementById('lvl6-pills');
+  container.innerHTML = '';
+
+  // 現在のMgrフィルタに合うチームのlvl6一覧
+  const visible = TEAM_DATA.filter(r => activeMgr === 'ALL' || r.ecs_mgr === activeMgr);
+  const byLvl5 = {};
+  visible.forEach(r => {
+    if(!r.lvl6) return;
+    const l5 = r.lvl6.replace(/^(ANL - JP - |JP - FS - |JP - PS\d+ - )/, '').split(' - ')[0];
+    if(!byLvl5[l5]) byLvl5[l5] = new Set();
+    byLvl5[l5].add(r.lvl6);
+  });
+
+  // 全表示ボタン
+  const allBtn = document.createElement('button');
+  allBtn.className = 'fpill all-pill' + (activeLvl6 === 'ALL' ? '' : ' inactive');
+  allBtn.textContent = '全表示';
+  allBtn.addEventListener('click', () => { activeLvl6 = 'ALL'; buildLvl6Pills(); rerender(); });
+  container.appendChild(allBtn);
+
+  Object.entries(byLvl5).forEach(([l5, lvl6set], gi) => {
+    if(gi > 0){
+      const sep = document.createElement('span');
+      sep.className = 'lvl6-sep';
+      sep.textContent = '|';
+      container.appendChild(sep);
+    }
+    // グループラベル（色なしテキスト）
+    const grpLbl = document.createElement('span');
+    grpLbl.style.cssText = 'font-size:11px;color:#898781;white-space:nowrap;align-self:center';
+    grpLbl.textContent = l5;
+    container.appendChild(grpLbl);
+
+    [...lvl6set].sort().forEach(l6 => {
+      const btn = document.createElement('button');
+      btn.className = 'fpill lvl6-pill' + (activeLvl6 === l6 ? ' active' : '');
+      // Mgrカラー（そのlvl6を持つ最初のチームのecs_mgrの色）で着色
+      const rep = TEAM_DATA.find(r => r.lvl6 === l6 && (activeMgr === 'ALL' || r.ecs_mgr === activeMgr));
+      const mgrCol = rep && MGR_COLOR[rep.ecs_mgr] ? MGR_COLOR[rep.ecs_mgr] : null;
+      const isActive = activeLvl6 === l6;
+      if(mgrCol){
+        btn.style.cssText = isActive
+          ? `background:${mgrCol};color:#fff;border-color:${mgrCol}`
+          : `background:none;border:1.5px solid ${mgrCol};color:${mgrCol}`;
+      }
+      // 短縮名：最後のセグメント
+      const segs = l6.split(' - ');
+      const short = segs[segs.length - 1];
+      btn.textContent = short;
+      btn.title = l6;
+      btn.addEventListener('click', () => { activeLvl6 = l6; buildLvl6Pills(); rerender(); });
+      container.appendChild(btn);
+    });
+  });
+}
+
+function rerender(){
+  renderMosaic('mosaic-team', getFilteredTeamData(), 'team');
+}
+
+buildMgrPills();
+buildLvl6Pills();
 
 renderMosaic('mosaic-mgr', MGR_DATA, 'mgr');
 renderMosaic('mosaic-team', TEAM_DATA, 'team');
@@ -356,14 +440,6 @@ document.querySelector('.tab-bar').addEventListener('click', e => {
   if(tab==='team'){
     renderMosaic('mosaic-team', getFilteredTeamData(), 'team');
   }
-});
-
-mgrSelect.addEventListener('change', () => {
-  renderMosaic('mosaic-team', getFilteredTeamData(), 'team');
-});
-
-lvl6Select.addEventListener('change', () => {
-  renderMosaic('mosaic-team', getFilteredTeamData(), 'team');
 });
 
 document.querySelectorAll('.vbtn').forEach(btn => {
