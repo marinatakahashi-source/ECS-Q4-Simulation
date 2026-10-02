@@ -370,7 +370,7 @@ function buildLvl6Pills(){
   container.innerHTML = '';
 
   // 現在のMgrフィルタに合うチームのlvl6一覧
-  const visible = TEAM_DATA.filter(r => activeMgr === 'ALL' || r.ecs_mgr === activeMgr);
+  const visible = TEAM_DATA.filter(r => (activeMgr === 'ALL' || r.ecs_mgr === activeMgr) && r.lvl6 !== 'Ryuta Asai');
   const byLvl5 = {};
   visible.forEach(r => {
     if(!r.lvl6) return;
